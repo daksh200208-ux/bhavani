@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080C15" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="shieldGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A" />
+      <stop offset="50%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+    <linearGradient id="accentGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+  </defs>
+
+  <!-- Safe Zone Background (Full 512x512 solid fill for maskable) -->
+  <rect width="512" height="512" fill="url(#bgGradMask)" />
+
+  <!-- Inner Padded Elements within 80% safe zone (center at 256, radius 200) -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#1E293B" stroke-width="3" stroke-dasharray="6, 8" />
+  <circle cx="256" cy="256" r="145" fill="none" stroke="#334155" stroke-width="2" />
+
+  <!-- Outer Protective Shield -->
+  <path d="M256 95 L370 145 C370 275 256 375 256 400 C256 375 142 275 142 145 Z"
+        fill="url(#shieldGradMask)"
+        stroke="#60A5FA"
+        stroke-width="7"
+        stroke-linejoin="round" />
+
+  <!-- Inner Shield -->
+  <path d="M256 120 L345 158 C345 264 256 345 256 365 C256 345 167 264 167 158 Z"
+        fill="#080C15"
+        stroke="url(#accentGradMask)"
+        stroke-width="4"
+        stroke-linejoin="round" />
+
+  <!-- Tactical Compass Star -->
+  <polygon points="256,145 280,240 256,225 232,240" fill="#38BDF8" />
+  <polygon points="256,320 280,250 256,265 232,250" fill="#10B981" />
+
+  <!-- Center Telemetry Pulse Core -->
+  <circle cx="256" cy="245" r="16" fill="#FFFFFF" />
+  <circle cx="256" cy="245" r="28" fill="none" stroke="#38BDF8" stroke-width="3.5" stroke-opacity="0.8" />
+</svg>

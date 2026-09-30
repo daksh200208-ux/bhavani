@@ -1,0 +1,68 @@
+{
+  "name": "Kanpur Tactical GIS & Safety Navigator",
+  "short_name": "Kanpur GIS",
+  "description": "Personal safety navigator and live tactical GIS platform for Kanpur Nagar Police Commissionerate",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080C15",
+  "theme_color": "#080C15",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["safety", "navigation", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Safe Route to Thana",
+      "short_name": "Safe Route",
+      "description": "1-Tap escape route to the nearest Kanpur police station",
+      "url": "/?action=safe-route",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Emergency 112 Dial",
+      "short_name": "Call 112",
+      "description": "Direct cellular dial to UP Police Emergency 112",
+      "url": "tel:112",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

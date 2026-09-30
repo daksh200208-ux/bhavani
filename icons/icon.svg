@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080C15" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A" />
+      <stop offset="50%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Base Canvas -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGrad)" />
+
+  <!-- Outer Radar Range Ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#1E293B" stroke-width="3" stroke-dasharray="6, 8" />
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#334155" stroke-width="2" />
+  <circle cx="256" cy="256" r="130" fill="none" stroke="#1E293B" stroke-width="2" stroke-dasharray="4, 6" />
+
+  <!-- Crosshairs -->
+  <line x1="256" y1="36" x2="256" y2="476" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.25" />
+  <line x1="36" y1="256" x2="476" y2="256" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.25" />
+
+  <!-- Outer Protective Shield -->
+  <path d="M256 70 L390 125 C390 280 256 395 256 425 C256 395 122 280 122 125 Z"
+        fill="url(#shieldGrad)"
+        stroke="#60A5FA"
+        stroke-width="8"
+        stroke-linejoin="round"
+        filter="url(#glow)" />
+
+  <!-- Inner High-Contrast Shield -->
+  <path d="M256 100 L360 144 C360 268 256 360 256 384 C256 360 152 268 152 144 Z"
+        fill="#080C15"
+        stroke="url(#accentGrad)"
+        stroke-width="5"
+        stroke-linejoin="round" />
+
+  <!-- Tactical Navigation Star / Heading Arrow -->
+  <polygon points="256,130 285,240 256,220 227,240" fill="#38BDF8" />
+  <polygon points="256,330 285,250 256,270 227,250" fill="#10B981" />
+
+  <!-- Center Telemetry Pulse Core -->
+  <circle cx="256" cy="245" r="18" fill="#FFFFFF" />
+  <circle cx="256" cy="245" r="32" fill="none" stroke="#38BDF8" stroke-width="4" stroke-opacity="0.75" />
+
+  <!-- Badge Text: KANPUR GIS 112 -->
+  <text x="256" y="475" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="900" fill="#38BDF8" letter-spacing="4">
+    KANPUR GIS
+  </text>
+</svg>

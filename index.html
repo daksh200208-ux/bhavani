@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#080C15">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kanpur GIS">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <title>Kanpur Tactical GIS & Safety Grid | Law Enforcement</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Custom Tactical Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- =========================================================================
+       APP HEADER / HUD
+       ========================================================================= -->
+  <header class="tactical-header">
+    <div class="brand-section">
+      <div class="police-crest-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <h1>Kanpur Tactical GIS</h1>
+        <div class="badge-sub">
+          <span class="live-beacon"></span>
+          <span>COMMISSIONERATE GRID</span>
+          <span style="color: #64748B;">&bull;</span>
+          <span style="color: #38BDF8;">RESTRICTED</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Top Locality HUD Chip (Offline Reverse-Geocoded Neighborhood) -->
+      <div class="locality-hud-chip" id="localityHudChip" title="Current Kanpur Neighborhood">
+        <span class="locality-dot"></span>
+        <span id="localityHudText">Mall Road & Cantt Perimeter</span>
+      </div>
+
+      <!-- Red Zone Proximity HUD Tag -->
+      <div class="nearest-hud-chip rz-safe" id="nearestRedZoneChip" title="Real-Time Red Zone Distance">
+        Red Zone: Safe
+      </div>
+
+      <!-- WebSocket Live Connection Status Pill -->
+      <div class="ws-status-chip status-offline" id="wsStatusChip" title="WebSocket Live Telemetry Status">
+        <span class="status-dot"></span>
+        <span class="status-text">GRID OFFLINE</span>
+      </div>
+
+      <!-- Offline Telemetry Active Pill -->
+      <div class="nearest-hud-chip" id="offlineIndicatorPill" style="display: none; border-color: #F59E0B; color: #FCD34D;">
+        âš ï¸ CELLULAR ACTIVE
+      </div>
+
+      <!-- Tactical Audio Mute/Unmute Toggle -->
+      <button class="glass-btn" id="audioToggleBtn" title="Tactical Audio Alerts (Click to Mute/Unmute)" style="width: 36px; height: 36px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+      </button>
+
+      <!-- Real-time Hardware Battery Telemetry Pill -->
+      <div class="battery-pill normal" id="deviceBatteryPill" title="Device Battery Level (Hardware Monitored)">
+        --% 🔋
+      </div>
+
+      <!-- Nearest Thana dynamic chip -->
+      <div class="nearest-hud-chip" id="nearestThanaChip" title="Click to focus on map">
+        <span>Thana:</span>
+        <strong id="nearestThanaName" style="color: #F8FAFC;">Locating...</strong>
+        <span class="dist-tag" id="nearestThanaDist">--</span>
+      </div>
+
+      <!-- Lock console button -->
+      <button class="glass-btn" id="lockAppBtn" title="Lock Tactical Console" style="width: 36px; height: 36px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Active Live Journey HUD (Watch Over Me) -->
+  <div id="activeJourneyHud" style="
+    display: none;
+    background: linear-gradient(90deg, #0369A1, #0284C7);
+    border-bottom: 1.5px solid #38BDF8;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: #FFFFFF;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1001;
+  ">
+    <div id="activeJourneyText">🛡️ <strong>Live Journey Active:</strong> Heading to <strong>Home</strong></div>
+    <button id="reachedSafelyBtn" class="reached-safely-btn">
+      ✅ I HAVE REACHED SAFELY
+    </button>
+  </div>
+
+  <!-- Guardian Viewer Mode Top Bar -->
+  <div id="guardianViewerBar" style="
+    display: none;
+    background: linear-gradient(90deg, #1E1B4B, #312E81);
+    border-bottom: 2px solid #6366F1;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #FFFFFF;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1002;
+  ">
+    <div id="guardianTripStatusText">👁️ <strong>Watching Over Citizen:</strong> Live GPS Synced</div>
+    <a href="tel:112" class="call-112-btn" style="padding: 6px 14px; font-size: 12px; text-decoration: none;">
+      🚨 Call 112
+    </a>
+  </div>
+
+  <!-- Proximity Warning Banner (Dynamically shown when near red zone) -->
+  <div id="hazardAlertBanner" style="
+    display: none;
+    background: linear-gradient(90deg, #991B1B, #7F1D1D);
+    border-bottom: 1px solid #EF4444;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: #FEE2E2;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 999;
+  ">
+    <div id="hazardAlertText">⚠️ PROXIMITY WARNING: Active Red Zone</div>
+    <span style="font-size: 10px; font-weight: 800; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px;">HIGH ALERT</span>
+  </div>
+
+  <!-- =========================================================================
+       MAIN VIEWPORT: LEAFLET MAP + INTERACTIVE DRAWER
+       ========================================================================= -->
+  <main class="app-viewport">
+
+    <!-- Leaflet GIS Map Canvas -->
+    <div id="map"></div>
+
+    <!-- Map Floating Controls -->
+    <div class="map-floating-controls">
+      <!-- Follow Me / Google Maps-Style Navigation Mode Toggle -->
+      <button class="glass-btn nav-follow-btn" id="followMeBtn" title="Toggle Follow Me / Navigation Mode">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+        </svg>
+        <span class="nav-btn-label">FOLLOW</span>
+      </button>
+
+      <!-- Locate Me GPS Button -->
+      <button class="glass-btn" id="locateMeMapBtn" title="Locate My GPS Position">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="22" y1="12" x2="18" y2="12"/>
+          <line x1="6" y1="12" x2="2" y2="12"/>
+          <line x1="12" y1="6" x2="12" y2="2"/>
+          <line x1="12" y1="22" x2="12" y2="18"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <!-- Map Zoom In -->
+      <button class="glass-btn" id="mapZoomInBtn" title="Zoom In">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+
+      <!-- Map Zoom Out -->
+      <button class="glass-btn" id="mapZoomOutBtn" title="Zoom Out">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+
+      <!-- Base Tile Switchers (Google Maps Global Grid) -->
+      <button class="glass-btn base-layer-btn active" data-layer="streetView" title="Google Maps Standard Roadmap">
+        <span style="font-size: 10px; font-weight: 800;">GOOGLE</span>
+      </button>
+      <button class="glass-btn base-layer-btn" data-layer="tacticalDark" title="Tactical Dark Map">
+        <span style="font-size: 10px; font-weight: 800;">DARK</span>
+      </button>
+      <button class="glass-btn base-layer-btn" data-layer="satellite" title="Google Maps Satellite Imagery">
+        <span style="font-size: 10px; font-weight: 800;">SAT</span>
+      </button>
+
+      <!-- Direct Google Maps App Sync Button -->
+      <a class="glass-btn" id="openInGoogleMapsBtn" target="_blank" rel="noopener noreferrer" title="Sync & Open Directly in Google Maps App" href="https://www.google.com/maps/@26.4499,80.3319,15z" style="text-decoration: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EA4335" stroke-width="2.2">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          <circle cx="12" cy="9" r="2.5" fill="#4285F4"/>
+        </svg>
+      </a>
+    </div>
+
+    <!-- Resume Follow Floating Pill (Auto-centering paused by manual drag) -->
+    <button class="resume-follow-pill" id="resumeFollowPill" style="display: none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/>
+      </svg>
+      <span>Resume Follow</span>
+    </button>
+
+    <!-- Floating Safe Haven Route Card -->
+    <div class="safe-haven-card" id="safeHavenCard" style="display: none;">
+      <div class="safe-haven-header">
+        <div class="safe-haven-badge">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>SAFE HAVEN ROUTE</span>
+        </div>
+        <button class="card-close-btn" id="cancelSafeRouteBtn" title="Cancel Safe Route">âœ•</button>
+      </div>
+      <div class="safe-haven-body">
+        <h4 id="safeRouteThanaName" class="safe-thana-name">Kotwali Police Station</h4>
+        <div id="safeRouteThanaMeta" class="safe-thana-meta">à¤•à¥‹à¤¤à¤µà¤¾à¤²à¥€ à¤¥à¤¾à¤¨à¤¾ â€¢ Central Zone</div>
+        <div class="safe-route-metrics">
+          <div class="metric-item">
+            <span class="metric-label">WALKING DISTANCE</span>
+            <span id="safeRouteDistance" class="metric-value">1.1 km walk</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">PEDESTRIAN ETA</span>
+            <span id="safeRouteEta" class="metric-value">~17 mins ETA</span>
+          </div>
+        </div>
+        <div class="safe-haven-actions">
+          <a id="safeRouteGmapsLink" href="#" target="_blank" rel="noopener noreferrer" class="gmaps-voice-nav-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+            </svg>
+            Start Voice Navigation in Google Maps
+          </a>
+          <a id="safeRouteShoCallBtn" href="tel:112" class="sho-direct-call-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            Call SHO
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map Filter Chips Bar -->
+    <div class="layer-filter-bar">
+      <div class="filter-chip chip-red active" data-layer-toggle="redZones">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #EF4444; display: inline-block;"></span>
+        Red Zones (8)
+      </div>
+      <div class="filter-chip active" data-layer-toggle="police">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #38BDF8; display: inline-block;"></span>
+        Police Thanas (49)
+      </div>
+      <div class="filter-chip active" data-layer-toggle="units">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+        Field Units (4)
+      </div>
+    </div>
+
+    <!-- Quick Sector Jump Bar (Instant neighborhood testing & relocation on laptop) -->
+    <div class="sector-quick-bar" id="sectorQuickBar">
+      <span class="sector-bar-title">SECTOR JUMP:</span>
+      <button class="sector-chip active" data-lat="26.4710" data-lng="80.3470" data-name="Civil Lines / Bada Chauraha">Bada Chauraha</button>
+      <button class="sector-chip" data-lat="26.4600" data-lng="80.3550" data-name="Mall Road & Cantt">Cantt</button>
+      <button class="sector-chip" data-lat="26.4800" data-lng="80.3180" data-name="Swaroop Nagar & Motijheel">Swaroop Nagar</button>
+      <button class="sector-chip" data-lat="26.4750" data-lng="80.2950" data-name="Kakadeo Coaching Hub">Kakadeo</button>
+      <button class="sector-chip" data-lat="26.4380" data-lng="80.3310" data-name="Kidwai Nagar">Kidwai Nagar</button>
+      <button class="sector-chip" data-lat="26.4680" data-lng="80.2450" data-name="Panki Dham">Panki</button>
+      <button class="sector-chip" data-lat="26.5050" data-lng="80.2490" data-name="Kalyanpur & IIT">Kalyanpur</button>
+    </div>
+
+    <!-- Tactical Notification Toast (Floating User Status HUD) -->
+    <div class="tactical-toast" id="tacticalToast" style="display: none;"></div>
+
+    <!-- Google Maps-Style Dedicated "Locate Me" & Pin Location FABs -->
+    <div class="gmaps-locate-container">
+      <button class="gmaps-locate-fab" id="gmapsLocateFab" title="Re-center My GPS Location">
+        <svg class="locate-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+          <circle cx="12" cy="12" r="8"/>
+          <line x1="12" y1="2" x2="12" y2="5"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="2" y1="12" x2="5" y2="12"/>
+          <line x1="19" y1="12" x2="22" y2="12"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+        <span>LOCATE ME</span>
+      </button>
+
+      <button class="gmaps-pin-fab" id="adjustLocationFab" title="Click anywhere on the map to set your exact location (Great for laptops)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span id="adjustLocationText">PIN SPOT</span>
+      </button>
+    </div>
+
+    <!-- =========================================================================
+         FLOATING 112 EMERGENCY CALL HUB (DIRECT PHONE DIALER & SAFE ROUTE)
+         ========================================================================= -->
+    <div class="emergency-floating-hub">
+      <div class="sos-sub-actions">
+        <!-- 1-Tap Safe Route Action Button -->
+        <button class="safe-route-thana-btn" id="safeRouteBtn" title="1-Tap Safe Route to Nearest Police Station">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>Safe Route to Thana</span>
+        </button>
+
+        <!-- Watch Over Me Live Guardian Button -->
+        <button class="safe-route-thana-btn watch-over-me-btn" id="watchOverMeBtn" title="Share Live Journey with Guardian / Family">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <circle cx="12" cy="11" r="3"/>
+          </svg>
+          <span>Watch Over Me</span>
+        </button>
+
+        <button class="mini-action-pill" id="openSosToolkitBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          SOS Toolkit
+        </button>
+      </div>
+
+      <!-- MAIN 112 ACTION: Native Telephone Dialer Trigger -->
+      <a href="tel:112" class="call-112-btn" id="main112DialBtn" title="Call UP Emergency 112 Immediately">
+        <svg viewBox="0 0 24 24">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+        <span>EMERGENCY</span>
+        <span class="btn-number">112</span>
+      </a>
+    </div>
+
+    <!-- =========================================================================
+         TACTICAL BOTTOM DRAWER / DESKTOP SIDEBAR
+         ========================================================================= -->
+    <aside class="tactical-drawer" id="tacticalDrawer">
+      <div class="drawer-grabber" id="drawerGrabber">
+        <div class="grabber-bar"></div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="drawer-nav-tabs">
+        <button class="tab-btn active" data-tab="helplines" id="tabBtnHelplines">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          Helplines (24/7)
+        </button>
+
+        <button class="tab-btn" data-tab="thanas">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Police Thanas (49)
+        </button>
+
+        <button class="tab-btn" data-tab="zones">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01"/>
+          </svg>
+          Red Zones
+        </button>
+      </nav>
+
+      <!-- Drawer Content Panes -->
+      <div class="drawer-content">
+
+        <!-- TAB 0: UP WOMEN & EMERGENCY HELPLINES (24/7 DIRECT CALL) -->
+        <div class="tab-pane" id="tab-helplines">
+          <div style="margin-bottom: 12px; font-size: 11px; color: #94A3B8; display: flex; justify-content: space-between; align-items: center;">
+            <span>Verified 24/7 Emergency Helplines (Uttar Pradesh)</span>
+            <span style="font-weight: 700; color: #10B981;">● 24/7 ACTIVE</span>
+          </div>
+          <div class="card-grid" id="helplinesListContainer">
+            <!-- Dynamically populated with UP 1090, 112, 181, 108, 139, 1930, 1098, 1076 -->
+          </div>
+        </div>
+
+        <!-- TAB 1: POLICE STATIONS DIRECTORY -->
+        <div class="tab-pane" id="tab-thanas" style="display: none;">
+          <div class="search-filter-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input type="text" id="thanaSearchInput" class="search-input" placeholder="Search 49 Thanas by name, SHO, circle or jurisdiction...">
+          </div>
+          <div class="card-grid" id="thanasListContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- TAB 2: CERTIFIED CRIME HOTSPOTS (RED ZONES) -->
+        <div class="tab-pane" id="tab-zones" style="display: none;">
+          <div style="margin-bottom: 12px; font-size: 11px; color: #94A3B8; display: flex; justify-content: space-between; align-items: center;">
+            <span>Operation Nirastikaran & Trinetra Hotspots</span>
+            <span style="font-weight: 700; color: #EF4444;">8 HIGH VIGILANCE POCKETS</span>
+          </div>
+          <div class="card-grid" id="zonesListContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+  </main>
+
+
+  <!-- =========================================================================
+       MODAL 1: EMERGENCY 112 DISPATCH TOOLKIT
+       ========================================================================= -->
+  <div class="tactical-modal-backdrop" id="emergencyModal">
+    <div class="tactical-modal">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #EF4444;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+          </svg>
+          Emergency 112 Dispatch
+        </div>
+        <button class="modal-close-btn" id="closeSosModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="6"/>
+          </svg>
+        </button>
+      </div>
+
+      <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="font-size: 11px; color: #FCA5A5; font-weight: 700;">YOUR LIVE GPS TELEMETRY</div>
+        <div style="font-family: monospace; font-size: 16px; font-weight: 700; color: #FFF; margin: 4px 0;">
+          <span id="sosLatVal">26.44990</span>, <span id="sosLngVal">80.33190</span>
+        </div>
+        <div style="font-size: 10px; color: #94A3B8;">Kanpur Nagar Metropolitan Jurisdiction</div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 11px; color: #94A3B8; margin-bottom: 4px;">NEAREST DESIGNATED THANA:</div>
+        <div id="sosNearestThanaName" style="font-size: 14px; font-weight: 700; color: #38BDF8; margin-bottom: 8px;">
+          Kotwali Police Station (1.2 km away)
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a id="sosNearestThanaCall" href="tel:9454403810" class="action-btn action-btn-call" style="font-size: 12px;">
+            Call SHO
+          </a>
+          <button id="copyGpsBtn" class="action-btn" style="font-size: 12px;">
+            Copy Coordinates
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- Direct 112 Calling -->
+        <a href="tel:112" class="call-112-btn" style="justify-content: center; width: 100%; border-radius: 12px; font-size: 16px; padding: 12px;">
+          Direct Dial 112 (Phone Dialpad)
+        </a>
+
+        <!-- WhatsApp Emergency Broadcast -->
+        <button id="whatsappSosBtn" class="action-btn" style="background: #059669; border-color: #10B981; color: white; padding: 12px; font-size: 13px; border-radius: 12px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 6.46 17.5 2 12.04 2M12.05 3.67C16.58 3.67 20.28 7.37 20.28 11.92C20.28 16.46 16.58 20.17 12.05 20.17C10.6 20.17 9.22 19.78 8.03 19.06L7.74 18.89L4.62 19.71L5.45 16.66L5.26 16.36C4.47 15.11 4.05 13.54 4.05 11.92C4.05 7.37 7.75 3.67 12.05 3.67Z"/>
+          </svg>
+          Broadcast SOS to WhatsApp Dispatch
+        </button>
+
+        <!-- Direct Native SMS Dispatch (112 / CUG) -->
+        <button id="smsSosBtn" class="action-btn" style="background: rgba(30, 41, 59, 0.9); border-color: #38BDF8; color: #38BDF8; padding: 12px; font-size: 13px; border-radius: 12px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Broadcast SOS via Direct SMS (112)
+        </button>
+
+        <!-- Dead-Battery Distress Beacon Test Trigger -->
+        <button id="testBatteryBeaconBtn" class="action-btn" style="background: rgba(239, 68, 68, 0.15); border-color: #EF4444; color: #FCA5A5; padding: 10px; font-size: 12px; border-radius: 12px; margin-top: 4px;">
+          🪫 Trigger Dead-Battery Distress Beacon (Simulation Test)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: WATCH OVER ME (LIVE GUARDIAN JOURNEY SETUP)
+       ========================================================================= -->
+  <div class="tactical-modal-backdrop" id="journeySetupModal" style="display: none;">
+    <div class="tactical-modal">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #38BDF8;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <circle cx="12" cy="11" r="3"/>
+          </svg>
+          Watch Over Me (Live Guardian Share)
+        </div>
+        <button class="modal-close-btn" id="closeJourneyModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="6"/>
+          </svg>
+        </button>
+      </div>
+
+      <p style="font-size: 12px; color: #94A3B8; margin-bottom: 14px; line-height: 1.5;">
+        Share a secure, live-tracking link with your family or friends over WhatsApp. They can watch your moving dot on Google Maps until you check in safely.
+      </p>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 11px; color: #CBD5E1; margin-bottom: 4px; font-weight: 600;">Your Name / Pseudonym</label>
+        <input type="text" id="journeyUserNameInput" class="search-input" value="Citizen" placeholder="Enter your name" style="padding-left: 12px;">
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 11px; color: #CBD5E1; margin-bottom: 4px; font-weight: 600;">Destination</label>
+        <input type="text" id="journeyDestinationInput" class="search-input" placeholder="e.g. Home, Hostel, Swaroop Nagar..." value="Home" style="padding-left: 12px;">
+        <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+          <button type="button" class="dest-chip active" data-dest="Home">🏠 Home</button>
+          <button type="button" class="dest-chip" data-dest="Hostel / PG">🏢 Hostel</button>
+          <button type="button" class="dest-chip" data-dest="Kanpur Central Railway Station">🚆 Kanpur Central</button>
+          <button type="button" class="dest-chip" data-dest="Swaroop Nagar">📍 Swaroop Nagar</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 11px; color: #CBD5E1; margin-bottom: 4px; font-weight: 600;">Guardian WhatsApp / Phone (Optional)</label>
+        <input type="tel" id="journeyGuardianPhoneInput" class="search-input" placeholder="e.g. 9876543210 (Leave blank to choose in WhatsApp)" style="padding-left: 12px;">
+      </div>
+
+      <button id="startJourneyBtn" class="call-112-btn" style="width: 100%; justify-content: center; font-size: 14px; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, #0284C7, #0369A1);">
+        🛡️ Start Live Guardian Tracking
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2b: CRITICAL DEAD-BATTERY DISTRESS BEACON
+       ========================================================================= -->
+  <div class="tactical-modal-backdrop" id="batteryDistressModal" style="display: none;">
+    <div class="tactical-modal" style="border: 2px solid #EF4444; background: rgba(15, 23, 42, 0.98);">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #EF4444;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="2" y="7" width="16" height="10" rx="2" ry="2"/>
+            <line x1="22" y1="11" x2="22" y2="13"/>
+            <line x1="7" y1="11" x2="7" y2="13"/>
+          </svg>
+          CRITICAL LOW BATTERY BEACON
+        </div>
+        <button class="modal-close-btn" id="closeBatteryModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="6"/>
+          </svg>
+        </button>
+      </div>
+
+      <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="font-size: 11px; color: #FCA5A5; font-weight: 700; margin-bottom: 6px;">
+          ⚠️ PHONE SHUTTING DOWN IMMINENTLY (&le; 5% BATTERY)
+        </div>
+        <p style="font-size: 11px; color: #E2E8F0; margin: 0; line-height: 1.4;" id="batteryDistressDetails">
+          Last known coordinates and safety zone locked. Emergency broadcast dispatched.
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button id="batteryBeaconWaBtn" class="call-112-btn" style="width: 100%; justify-content: center; font-size: 14px; padding: 12px; border-radius: 12px; background: #059669;">
+          Send Last Coordinates via WhatsApp
+        </button>
+        <button id="batteryBeaconSmsBtn" class="action-btn" style="width: 100%; justify-content: center; font-size: 13px; padding: 12px; border-radius: 12px; border-color: #38BDF8; color: #38BDF8;">
+          Send Last Coordinates via SMS
+        </button>
+        <a href="tel:112" class="call-112-btn" style="width: 100%; justify-content: center; font-size: 14px; padding: 12px; border-radius: 12px; text-decoration: none;">
+          🚨 Emergency 112 Dial
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 3: DESIGNATED PERSONNEL PIN SECURITY GATE
+       ========================================================================= -->
+  <div class="tactical-modal-backdrop" id="pinGateModal">
+    <div class="tactical-modal" style="text-align: center; position: relative;">
+      <button class="modal-close-btn" id="closePinGateBtn" style="position: absolute; top: 16px; right: 16px;" title="Return to Citizen Mode">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="6"/>
+        </svg>
+      </button>
+
+      <div style="width: 48px; height: 48px; background: rgba(37,99,235,0.2); border: 1px solid #38BDF8; border-radius: 12px; margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center; color: #38BDF8;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+
+      <h2 style="font-size: 18px; font-weight: 800; color: #FFF;">OFFICER TACTICAL CONSOLE</h2>
+      <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">Authorized Law Enforcement & Admin Access</p>
+
+      <div class="pin-dots">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+
+      <div id="pinErrorMsg" style="color: #EF4444; font-size: 12px; display: none; margin-bottom: 8px;">
+        Invalid PIN. Access Restricted.
+      </div>
+
+      <!-- Numeric Keypad -->
+      <div class="pin-pad">
+        <button class="pin-btn" data-num="1">1</button>
+        <button class="pin-btn" data-num="2">2</button>
+        <button class="pin-btn" data-num="3">3</button>
+        <button class="pin-btn" data-num="4">4</button>
+        <button class="pin-btn" data-num="5">5</button>
+        <button class="pin-btn" data-num="6">6</button>
+        <button class="pin-btn" data-num="7">7</button>
+        <button class="pin-btn" data-num="8">8</button>
+        <button class="pin-btn" data-num="9">9</button>
+        <button class="pin-btn" id="pinClearBtn" style="font-size: 13px; color: #94A3B8;">CLR</button>
+        <button class="pin-btn" data-num="0">0</button>
+        <button class="pin-btn" id="pinSubmitBtn" style="font-size: 13px; color: #38BDF8;">OK</button>
+      </div>
+
+      <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 11px; color: #64748B;">Default Badge PIN: <strong style="color: #94A3B8;">1120</strong></span>
+        <button id="pinBypassBtn" style="background: transparent; border: none; color: #38BDF8; font-size: 11px; font-weight: 600; cursor: pointer; text-decoration: underline;">
+          Quick Unlock (Inspection)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       PWA IN-APP INSTALL PROMPT BANNER
+       ========================================================================= -->
+  <div class="pwa-install-banner" id="pwaInstallBanner" style="display: none;">
+    <div class="pwa-banner-content">
+      <div class="pwa-banner-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div class="pwa-banner-text">
+        <strong>Install Kanpur Tactical GIS</strong>
+        <span>Add to home screen for 1-tap emergency launch & offline safety navigation.</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button id="pwaInstallBtn" class="pwa-btn pwa-btn-primary">Add to Home Screen</button>
+      <button id="pwaDismissBtn" class="pwa-btn pwa-btn-dismiss">Later</button>
+    </div>
+  </div>
+
+  <!-- Leaflet JS Library -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Application Modules (v3.6.0 Live Guardian & Battery Beacon) -->
+  <script src="js/config.js?v=3.6.0"></script>
+  <script src="js/data/policeStations.js?v=3.6.0"></script>
+  <script src="js/data/crimeHotspots.js?v=3.6.0"></script>
+  <script src="js/data/localities.js?v=3.6.0"></script>
+  <script src="js/audio.js?v=3.6.0"></script>
+  <script src="js/map.js?v=3.6.0"></script>
+  <script src="js/realtime.js?v=3.6.0"></script>
+  <script src="js/emergency.js?v=3.6.0"></script>
+  <script src="js/guardian.js?v=3.6.0"></script>
+  <script src="js/batteryBeacon.js?v=3.6.0"></script>
+  <script src="js/pwa.js?v=3.6.0"></script>
+  <script src="js/app.js?v=3.6.0"></script>
+
+</body>
+</html>

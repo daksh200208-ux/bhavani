@@ -1,0 +1,22 @@
+{
+  "name": "kanpur-safety-gis",
+  "version": "2.6.0",
+  "description": "Hardened Real-Time Tactical Safety, Navigation & PWA Telemetry Platform for Kanpur Nagar",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test-realtime.js",
+    "test:nav": "node test-navigation-pwa.js",
+    "test:all": "node test-realtime.js && node tests/adversarial-geofence.test.js && node tests/adversarial/security_adversarial_suite.js && node test-navigation-pwa.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true
+}
