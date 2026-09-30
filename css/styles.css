@@ -41,14 +41,19 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
+html, body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
 }
@@ -175,45 +180,51 @@ body {
   height: 100%;
   background: #090e17;
   z-index: 10;
+  touch-action: pan-x pan-y pinch-zoom;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
 /* ==========================================================================
    FLOATING 112 EMERGENCY CALL BUTTON (INSTANT NATIVE DIALER)
    ========================================================================== */
 .emergency-floating-hub {
-  position: absolute;
-  bottom: calc(72px + var(--safe-bottom));
-  right: 16px;
-  z-index: 1001;
+  position: relative;
+  z-index: 10;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 4px 16px 8px 16px;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* The primary 112 button triggers tel:112 immediately */
 .call-112-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   background: linear-gradient(135deg, #DC2626, #991B1B);
   color: #FFFFFF;
   text-decoration: none;
-  padding: 14px 22px;
-  border-radius: 36px;
+  padding: 12px 20px;
+  border-radius: 14px;
   box-shadow: var(--shadow-emergency);
   border: 2px solid rgba(255, 255, 255, 0.35);
   font-weight: 800;
-  font-size: 17px;
+  font-size: 16px;
   letter-spacing: 0.5px;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  min-height: 48px;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, padding 0.2s ease;
   animation: pulse-sos 2.2s infinite;
 }
 
 .call-112-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.95);
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
 }
 
@@ -221,10 +232,11 @@ body {
   width: 22px;
   height: 22px;
   fill: currentColor;
+  flex-shrink: 0;
 }
 
 .call-112-btn .btn-number {
-  font-size: 20px;
+  font-size: 19px;
   font-family: var(--font-mono);
   letter-spacing: 1px;
 }
@@ -232,15 +244,49 @@ body {
 .sos-sub-actions {
   display: flex;
   gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  padding-bottom: 2px;
+}
+
+.sos-sub-actions::-webkit-scrollbar {
+  display: none;
+}
+
+.safe-route-thana-btn {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34D399;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.safe-route-thana-btn:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: #10B981;
+  color: #FFF;
 }
 
 .mini-action-pill {
   background: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 8px 12px;
+  border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
   display: flex;
@@ -249,6 +295,9 @@ body {
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transition: all 0.2s ease;
+  min-height: 40px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .mini-action-pill:hover {
@@ -351,46 +400,186 @@ body {
 }
 
 /* ==========================================================================
-   TACTICAL BOTTOM DRAWER / DESKTOP SIDEBAR
+   TACTICAL BOTTOM SHEET / DESKTOP SIDEBAR
    ========================================================================== */
 .tactical-drawer {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 55vh;
-  max-height: 85vh;
-  min-height: 70px;
-  background: rgba(11, 17, 30, 0.96);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  height: calc(100% - 56px);
+  max-height: calc(100dvh - 56px);
+  background: rgba(11, 17, 30, 0.97);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--border-subtle);
   border-radius: 20px 20px 0 0;
   z-index: 1002;
   display: flex;
   flex-direction: column;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s ease;
+  will-change: transform;
+  transform: translate3d(0, calc(100% - 48dvh), 0);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
+.tactical-drawer.is-dragging {
+  transition: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(11, 17, 30, 0.99);
+}
+
+.tactical-drawer.state-minimized,
 .tactical-drawer.collapsed {
-  transform: translateY(calc(100% - 62px));
+  transform: translate3d(0, calc(100% - 76px - var(--safe-bottom)), 0);
+}
+
+.tactical-drawer.state-half {
+  transform: translate3d(0, calc(100% - 48dvh), 0);
+}
+
+.tactical-drawer.state-expanded {
+  transform: translate3d(0, 0, 0);
+}
+
+/* Minimized peek layout adaptations */
+.tactical-drawer.state-minimized .emergency-floating-hub,
+.tactical-drawer.collapsed .emergency-floating-hub {
+  padding: 0 10px 6px 10px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  touch-action: none;
+}
+
+.tactical-drawer.state-minimized .call-112-btn,
+.tactical-drawer.collapsed .call-112-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 22px;
+  min-height: 38px;
+  flex-shrink: 0;
+  gap: 5px;
+  order: -1;
+  animation: none;
+}
+
+.tactical-drawer.state-minimized .call-112-btn svg,
+.tactical-drawer.collapsed .call-112-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.tactical-drawer.state-minimized .call-112-btn .btn-title,
+.tactical-drawer.collapsed .call-112-btn .btn-title {
+  display: inline;
+  font-size: 11px;
+}
+
+.tactical-drawer.state-minimized .call-112-btn .btn-number,
+.tactical-drawer.collapsed .call-112-btn .btn-number {
+  font-size: 13px;
+}
+
+.tactical-drawer.state-minimized .sos-sub-actions,
+.tactical-drawer.collapsed .sos-sub-actions {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.tactical-drawer.state-minimized .safe-route-thana-btn,
+.tactical-drawer.collapsed .safe-route-thana-btn {
+  padding: 6px 9px;
+  font-size: 10px;
+  min-height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.tactical-drawer.state-minimized .mini-action-pill,
+.tactical-drawer.collapsed .mini-action-pill {
+  padding: 6px 8px;
+  font-size: 10px;
+  min-height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .drawer-grabber {
   width: 100%;
-  padding: 10px 0 6px 0;
+  padding: 6px 0 2px 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  min-height: 28px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.drawer-grabber:active {
+  cursor: grabbing;
 }
 
 .grabber-bar {
   width: 44px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.4);
   border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.drawer-grabber:hover .grabber-bar {
+  background: var(--text-accent);
+  width: 52px;
+}
+
+.grabber-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+.drawer-toggle-pill {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--text-accent);
+  border-radius: 12px;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.drawer-toggle-pill:hover,
+.drawer-toggle-pill:active {
+  background: rgba(56, 189, 248, 0.3);
+  color: #FFF;
 }
 
 .drawer-nav-tabs {
@@ -400,6 +589,9 @@ body {
   border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  flex-shrink: 0;
 }
 
 .drawer-nav-tabs::-webkit-scrollbar {
@@ -807,6 +999,7 @@ body {
     border-right: 1px solid var(--border-subtle);
     order: -1;
     transform: none !important;
+    box-shadow: none;
   }
 
   .drawer-grabber {
@@ -814,8 +1007,219 @@ body {
   }
 
   .emergency-floating-hub {
-    bottom: 24px;
-    right: 24px;
+    position: relative;
+    bottom: auto;
+    right: auto;
+    width: 100%;
+    padding: 14px 16px 8px 16px;
+    gap: 10px;
+  }
+
+  .call-112-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .sos-sub-actions {
+    flex-wrap: wrap;
+  }
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS & TOUCH TARGET OPTIMIZATIONS (< 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* GPU Lag Elimination: Bypass expensive dynamic blurs on mobile devices */
+  .tactical-header,
+  .tactical-drawer,
+  .glass-btn,
+  .mini-action-pill,
+  .tactical-modal,
+  .safe-haven-card,
+  .leaflet-popup-content-wrapper {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .tactical-header {
+    height: 50px;
+    padding: 0 8px;
+    gap: 5px;
+    background: rgba(11, 17, 30, 0.98) !important;
+  }
+
+  .tactical-drawer {
+    background: rgba(11, 17, 30, 0.98) !important;
+  }
+
+  .police-crest-badge {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+
+  .brand-title {
+    max-width: 125px;
+    overflow: hidden;
+  }
+
+  .brand-title h1 {
+    font-size: 12px;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-title .badge-sub {
+    display: none;
+  }
+
+  .header-actions {
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 5px;
+    padding: 2px 0;
+  }
+
+  .header-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nearest-hud-chip,
+  .ws-status-chip,
+  .battery-pill,
+  .locality-hud-chip {
+    font-size: 10px;
+    padding: 3px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 28px;
+  }
+
+  .locality-hud-chip {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #localityHudText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .glass-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    background: rgba(15, 23, 42, 0.96) !important;
+  }
+
+  .map-floating-controls {
+    top: 8px;
+    left: 8px;
+    gap: 5px;
+  }
+
+  .map-floating-controls .glass-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Pinch-to-zoom is native on phones; hide bulky zoom buttons to unclutter screen */
+  #mapZoomInBtn,
+  #mapZoomOutBtn {
+    display: none !important;
+  }
+
+  .map-floating-controls .base-layer-btn {
+    width: 36px;
+    height: 26px;
+  }
+
+  .map-floating-controls .base-layer-btn span {
+    font-size: 8px !important;
+  }
+
+  .layer-filter-bar {
+    top: 8px;
+    left: 48px;
+    right: 8px;
+    gap: 6px;
+    padding-bottom: 2px;
+    touch-action: pan-x;
+  }
+
+  /* Hide laptop-only sector jump bar on phones to maximize map viewport */
+  .sector-quick-bar {
+    display: none !important;
+  }
+
+  .filter-chip {
+    font-size: 10px;
+    padding: 4px 8px;
+    flex-shrink: 0;
+  }
+
+  .gmaps-locate-fab {
+    padding: 8px 12px;
+    font-size: 11px;
+    border-radius: 20px;
+  }
+
+  .gmaps-pin-fab {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+
+  .tactical-modal {
+    padding: 16px 12px;
+    max-height: calc(100dvh - 20px);
+    border-radius: 16px;
+    background: rgba(11, 17, 30, 0.98) !important;
+  }
+
+  .pin-pad {
+    gap: 8px;
+  }
+
+  .pin-btn {
+    height: 46px;
+    font-size: 18px;
+  }
+
+  /* Prevent card action buttons from cutting off on narrow phone viewports */
+  .card-action-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .action-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-height: 40px;
+    font-size: 11px;
+    padding: 7px 6px;
+    text-align: center;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  .action-btn-call {
+    flex: 1 1 100%;
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  .drawer-content {
+    padding: 10px 12px calc(24px + env(safe-area-inset-bottom, 16px)) 12px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -1187,18 +1591,19 @@ body {
 
 .safe-haven-card {
   position: absolute;
-  bottom: 84px;
-  left: 16px;
-  right: 16px;
+  bottom: calc(var(--drawer-visible-height, 74px) + var(--safe-bottom) + 10px);
+  left: 14px;
+  right: 14px;
   max-width: 440px;
   margin: 0 auto;
-  z-index: 1000;
-  background: rgba(8, 12, 21, 0.94);
+  z-index: 1005;
+  background: rgba(8, 12, 21, 0.96);
   border: 1.5px solid #10B981;
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(16, 185, 129, 0.35);
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   animation: slideUpCard 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1477,13 +1882,19 @@ body.pwa-standalone {
    ========================================================================== */
 .gmaps-locate-container {
   position: absolute;
-  bottom: 80px;
+  bottom: calc(var(--drawer-visible-height, 74px) + var(--safe-bottom) + 10px);
   right: 14px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
+  transition: bottom 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+.app-viewport.drawer-expanded .gmaps-locate-container {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .gmaps-locate-fab {

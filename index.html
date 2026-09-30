@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   
   <!-- Custom Tactical Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=3.8.0">
 </head>
 <body>
 
@@ -315,56 +315,60 @@
       </button>
     </div>
 
-    <!-- =========================================================================
-         FLOATING 112 EMERGENCY CALL HUB (DIRECT PHONE DIALER & SAFE ROUTE)
-         ========================================================================= -->
-    <div class="emergency-floating-hub">
-      <div class="sos-sub-actions">
-        <!-- 1-Tap Safe Route Action Button -->
-        <button class="safe-route-thana-btn" id="safeRouteBtn" title="1-Tap Safe Route to Nearest Police Station">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          </svg>
-          <span>Safe Route to Thana</span>
-        </button>
-
-        <!-- Watch Over Me Live Guardian Button -->
-        <button class="safe-route-thana-btn watch-over-me-btn" id="watchOverMeBtn" title="Share Live Journey with Guardian / Family">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <circle cx="12" cy="11" r="3"/>
-          </svg>
-          <span>Watch Over Me</span>
-        </button>
-
-        <button class="mini-action-pill" id="openSosToolkitBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
-          SOS Toolkit
-        </button>
+    <aside class="tactical-drawer state-half" id="tacticalDrawer">
+      <div class="drawer-grabber" id="drawerGrabber" title="Slide down to view full map • Slide up for options">
+        <div class="grabber-bar"></div>
+        <div class="grabber-hint" id="grabberHint">
+          <span class="hint-text">↕ SLIDE TO MINIMIZE / VIEW FULL MAP</span>
+          <button type="button" class="drawer-toggle-pill" id="drawerTogglePill" title="Toggle Sheet State">
+            <span id="drawerToggleLabel">MINIMIZE</span>
+            <svg id="drawerToggleIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <!-- MAIN 112 ACTION: Native Telephone Dialer Trigger -->
-      <a href="tel:112" class="call-112-btn" id="main112DialBtn" title="Call UP Emergency 112 Immediately">
-        <svg viewBox="0 0 24 24">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-        </svg>
-        <span>EMERGENCY</span>
-        <span class="btn-number">112</span>
-      </a>
-    </div>
+      <!-- Emergency Calling Hub (Direct Phone Dialer & Safe Haven Actions) -->
+      <div class="emergency-floating-hub" id="emergencyFloatingHub">
+        <div class="sos-sub-actions">
+          <!-- 1-Tap Safe Route Action Button -->
+          <button class="safe-route-thana-btn" id="safeRouteBtn" title="1-Tap Safe Route to Nearest Police Station">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Safe Route to Thana</span>
+          </button>
 
-    <!-- =========================================================================
-         TACTICAL BOTTOM DRAWER / DESKTOP SIDEBAR
-         ========================================================================= -->
-    <aside class="tactical-drawer" id="tacticalDrawer">
-      <div class="drawer-grabber" id="drawerGrabber">
-        <div class="grabber-bar"></div>
+          <!-- Watch Over Me Live Guardian Button -->
+          <button class="safe-route-thana-btn watch-over-me-btn" id="watchOverMeBtn" title="Share Live Journey with Guardian / Family">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <circle cx="12" cy="11" r="3"/>
+            </svg>
+            <span>Watch Over Me</span>
+          </button>
+
+          <button class="mini-action-pill" id="openSosToolkitBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            SOS Toolkit
+          </button>
+        </div>
+
+        <!-- MAIN 112 ACTION: Native Telephone Dialer Trigger -->
+        <a href="tel:112" class="call-112-btn" id="main112DialBtn" title="Call UP Emergency 112 Immediately">
+          <svg viewBox="0 0 24 24">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          <span class="btn-title">EMERGENCY</span>
+          <span class="btn-number">112</span>
+        </a>
       </div>
 
       <!-- Navigation Tabs -->
@@ -683,19 +687,19 @@
   <!-- Leaflet JS Library -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-  <!-- Application Modules (v3.6.0 Live Guardian & Battery Beacon) -->
-  <script src="js/config.js?v=3.6.0"></script>
-  <script src="js/data/policeStations.js?v=3.6.0"></script>
-  <script src="js/data/crimeHotspots.js?v=3.6.0"></script>
-  <script src="js/data/localities.js?v=3.6.0"></script>
-  <script src="js/audio.js?v=3.6.0"></script>
-  <script src="js/map.js?v=3.6.0"></script>
-  <script src="js/realtime.js?v=3.6.0"></script>
-  <script src="js/emergency.js?v=3.6.0"></script>
-  <script src="js/guardian.js?v=3.6.0"></script>
-  <script src="js/batteryBeacon.js?v=3.6.0"></script>
-  <script src="js/pwa.js?v=3.6.0"></script>
-  <script src="js/app.js?v=3.6.0"></script>
+  <!-- Application Modules (v3.8.0 Mobile Gestures, Performance & Responsive UX) -->
+  <script src="js/config.js?v=3.8.0"></script>
+  <script src="js/data/policeStations.js?v=3.8.0"></script>
+  <script src="js/data/crimeHotspots.js?v=3.8.0"></script>
+  <script src="js/data/localities.js?v=3.8.0"></script>
+  <script src="js/audio.js?v=3.8.0"></script>
+  <script src="js/map.js?v=3.8.0"></script>
+  <script src="js/realtime.js?v=3.8.0"></script>
+  <script src="js/emergency.js?v=3.8.0"></script>
+  <script src="js/guardian.js?v=3.8.0"></script>
+  <script src="js/batteryBeacon.js?v=3.8.0"></script>
+  <script src="js/pwa.js?v=3.8.0"></script>
+  <script src="js/app.js?v=3.8.0"></script>
 
 </body>
 </html>

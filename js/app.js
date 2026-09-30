@@ -265,28 +265,355 @@ class KanpurGISApp {
   // =========================================================================
   // 2. BOTTOM DRAWER & TAB NAVIGATION
   // =========================================================================
+  // =========================================================================
+  // 2. BOTTOM DRAWER & TAB NAVIGATION WITH GOOGLE MAPS-STYLE GESTURES
+  // =========================================================================
   setupDrawerTabs() {
     const tabs = document.querySelectorAll(".drawer-nav-tabs .tab-btn");
     const drawer = document.getElementById("tacticalDrawer");
     const grabber = document.getElementById("drawerGrabber");
+    const viewport = document.querySelector(".app-viewport") || document.body;
 
-    // Drawer grabber toggle
-    if (grabber && drawer) {
-      grabber.addEventListener("click", () => {
-        drawer.classList.toggle("collapsed");
-      });
-    }
+    this.drawerState = "half"; // Default state: half sheet
+    this.updateDrawerVisualState();
 
+    // 1. Setup Tab Switching
     tabs.forEach(tab => {
       tab.addEventListener("click", () => {
         const targetTab = tab.getAttribute("data-tab");
         this.switchTab(targetTab);
         
-        // Expand drawer if collapsed
-        if (drawer && drawer.classList.contains("collapsed")) {
-          drawer.classList.remove("collapsed");
+        // If drawer is currently minimized, expand to half
+        if (this.drawerState === "minimized") {
+          this.setDrawerState("half");
         }
       });
+    });
+
+    // 2. Setup Touch Drag & Gestures (touchstart, touchmove, touchend)
+    if (drawer && grabber) {
+      this.setupDrawerGestures(drawer, grabber, viewport);
+    }
+  }
+
+  setDrawerState(newState) {
+    if (!["minimized", "half", "expanded"].includes(newState)) return;
+    this.drawerState = newState;
+    this.updateDrawerVisualState();
+  }
+
+  getDrawerState() {
+    return this.drawerState || "half";
+  }
+
+  updateDrawerVisualState() {
+    const drawer = document.getElementById("tacticalDrawer");
+    const viewport = document.querySelector(".app-viewport") || document.body;
+    const hintText = document.querySelector("#grabberHint .hint-text");
+    const toggleLabel = document.getElementById("drawerToggleLabel");
+    const toggleIcon = document.getElementById("drawerToggleIcon");
+    if (!drawer) return;
+
+    // Remove all state classes
+    drawer.classList.remove("state-minimized", "state-half", "state-expanded", "collapsed");
+    viewport.classList.remove("drawer-minimized", "drawer-half", "drawer-expanded");
+
+    if (this.drawerState === "minimized") {
+      drawer.classList.add("state-minimized", "collapsed");
+      viewport.classList.add("drawer-minimized");
+      viewport.style.setProperty("--drawer-visible-height", "76px");
+      if (hintText) hintText.textContent = "▲ SLIDE UP FOR 49 THANAS & HELPLINES";
+      if (toggleLabel) toggleLabel.textContent = "EXPAND";
+      if (toggleIcon) toggleIcon.innerHTML = '<polyline points="18 15 12 9 6 15"></polyline>';
+    } else if (this.drawerState === "expanded") {
+      drawer.classList.add("state-expanded");
+      viewport.classList.add("drawer-expanded");
+      viewport.style.setProperty("--drawer-visible-height", "88vh");
+      if (hintText) hintText.textContent = "▼ SLIDE DOWN FOR FULL MAP";
+      if (toggleLabel) toggleLabel.textContent = "MINIMIZE";
+      if (toggleIcon) toggleIcon.innerHTML = '<polyline points="6 9 12 15 18 9"></polyline>';
+    } else {
+      // Default: half
+      this.drawerState = "half";
+      drawer.classList.add("state-half");
+      viewport.classList.add("drawer-half");
+      viewport.style.setProperty("--drawer-visible-height", "48vh");
+      if (hintText) hintText.textContent = "↕ SLIDE DOWN FOR MAP • UP FOR THANAS";
+      if (toggleLabel) toggleLabel.textContent = "MINIMIZE";
+      if (toggleIcon) toggleIcon.innerHTML = '<polyline points="6 9 12 15 18 9"></polyline>';
+    }
+
+    // Invalidate Leaflet map size so tiles seamlessly cover new viewport area
+    if (this.mapEngine && this.mapEngine.map) {
+      setTimeout(() => {
+        try {
+          this.mapEngine.map.invalidateSize({ debounceMoveend: true });
+        } catch (e) {}
+      }, 300);
+    }
+  }
+
+  setupDrawerGestures(drawer, grabber, viewport) {
+    let startY = 0;
+    let initialTranslateY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    let hasMoved = false;
+    let startTime = 0;
+    let lastY = 0;
+    let lastTime = 0;
+    let velocity = 0;
+    let animationFrameId = null;
+    let activePointerId = null;
+
+    const drawerContent = drawer.querySelector(".drawer-content");
+    const togglePill = document.getElementById("drawerTogglePill");
+
+    const getDrawerMetrics = () => {
+      const H = window.innerHeight;
+      const drawerHeight = drawer.offsetHeight || (H - 56);
+      const peekHeight = 76; // Height in px of minimized bar
+      const halfHeight = Math.round(H * 0.48); // Height of half sheet
+      
+      const maxTranslate = drawerHeight - peekHeight; // translateY for minimized
+      const halfTranslate = drawerHeight - halfHeight; // translateY for half
+      const minTranslate = 0; // translateY for expanded
+
+      return { H, drawerHeight, peekHeight, maxTranslate, halfTranslate, minTranslate };
+    };
+
+    const getTranslateForState = (state, metrics) => {
+      if (state === "minimized") return metrics.maxTranslate;
+      if (state === "expanded") return metrics.minTranslate;
+      return metrics.halfTranslate;
+    };
+
+    // Grabber tap/click toggle
+    const handleTapToggle = () => {
+      if (hasMoved) return;
+      if (window.innerWidth >= 900) return; // Desktop sidebar
+
+      if (this.drawerState === "minimized") {
+        this.setDrawerState("half");
+      } else if (this.drawerState === "half") {
+        this.setDrawerState("minimized");
+      } else {
+        this.setDrawerState("half");
+      }
+    };
+
+    grabber.addEventListener("click", (e) => {
+      if (e.target.closest("#drawerTogglePill")) return;
+      handleTapToggle();
+    });
+
+    if (togglePill) {
+      togglePill.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handleTapToggle();
+      });
+    }
+
+    const startDrag = (clientY, target, pointerId) => {
+      if (window.innerWidth >= 900) return false;
+
+      // If touching content pane, only allow pull-down if already at the top of content
+      const isContentArea = target && target.closest(".drawer-content");
+      if (isContentArea) {
+        if (drawerContent && drawerContent.scrollTop > 2) {
+          return false;
+        }
+      }
+
+      const metrics = getDrawerMetrics();
+      startY = clientY;
+      lastY = startY;
+      startTime = Date.now();
+      lastTime = startTime;
+      velocity = 0;
+      hasMoved = false;
+      activePointerId = pointerId;
+
+      initialTranslateY = getTranslateForState(this.drawerState, metrics);
+      currentY = initialTranslateY;
+      isDragging = true;
+      return true;
+    };
+
+    const moveDrag = (clientY, cancelableEvent) => {
+      if (!isDragging) return;
+
+      const deltaY = clientY - startY;
+
+      // Dead-zone check to allow clean tapping on emergency buttons
+      if (!hasMoved) {
+        if (Math.abs(deltaY) < 6) {
+          return;
+        }
+        hasMoved = true;
+        drawer.classList.add("is-dragging");
+        drawer.style.transition = "none";
+      }
+
+      // Content scroll coordination: if expanded and dragging up, let native scroll happen
+      if (this.drawerState === "expanded" && drawerContent && drawerContent.scrollTop > 0 && deltaY < 0) {
+        isDragging = false;
+        drawer.classList.remove("is-dragging");
+        drawer.style.transition = "";
+        drawer.style.transform = "";
+        return;
+      }
+
+      // Prevent window scroll while dragging sheet
+      if (cancelableEvent && cancelableEvent.cancelable) {
+        cancelableEvent.preventDefault();
+      }
+
+      const metrics = getDrawerMetrics();
+      let nextTranslate = initialTranslateY + deltaY;
+
+      // Resistance beyond boundaries
+      if (nextTranslate < metrics.minTranslate) {
+        nextTranslate = metrics.minTranslate + (nextTranslate - metrics.minTranslate) * 0.2;
+      } else if (nextTranslate > metrics.maxTranslate) {
+        nextTranslate = metrics.maxTranslate + (nextTranslate - metrics.maxTranslate) * 0.2;
+      }
+
+      currentY = nextTranslate;
+
+      // Velocity tracking
+      const now = Date.now();
+      const dt = now - lastTime;
+      if (dt > 10) {
+        velocity = (clientY - lastY) / dt;
+        lastY = clientY;
+        lastTime = now;
+      }
+
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        drawer.style.transform = `translate3d(0, ${Math.round(currentY)}px, 0)`;
+      });
+    };
+
+    const endDrag = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      activePointerId = null;
+
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+
+      drawer.classList.remove("is-dragging");
+
+      if (!hasMoved) {
+        drawer.style.transition = "";
+        drawer.style.transform = "";
+        return;
+      }
+
+      const metrics = getDrawerMetrics();
+      const deltaY = currentY - initialTranslateY;
+      let targetState = this.drawerState;
+
+      // Directional, intuitive momentum & threshold snapping
+      if (this.drawerState === "half") {
+        if (velocity > 0.18 || deltaY > 35) {
+          targetState = "minimized"; // Slide down to reveal full map
+        } else if (velocity < -0.18 || deltaY < -35) {
+          targetState = "expanded"; // Slide up for thanas & helplines
+        } else {
+          targetState = "half";
+        }
+      } else if (this.drawerState === "minimized") {
+        if (velocity < -0.18 || deltaY < -35) {
+          targetState = deltaY < -150 ? "expanded" : "half";
+        } else {
+          targetState = "minimized";
+        }
+      } else if (this.drawerState === "expanded") {
+        if (velocity > 0.18 || deltaY > 35) {
+          targetState = deltaY > 160 ? "minimized" : "half";
+        } else {
+          targetState = "expanded";
+        }
+      }
+
+      // Smooth spring transition to exact target
+      const targetY = getTranslateForState(targetState, metrics);
+      drawer.style.transition = "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)";
+      drawer.style.transform = `translate3d(0, ${Math.round(targetY)}px, 0)`;
+
+      setTimeout(() => {
+        drawer.style.transition = "";
+        drawer.style.transform = "";
+        this.setDrawerState(targetState);
+      }, 290);
+    };
+
+    // Modern Pointer Events with pointer capture on grabber
+    if (window.PointerEvent && grabber) {
+      grabber.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        if (startDrag(e.clientY, e.target, e.pointerId)) {
+          try {
+            grabber.setPointerCapture(e.pointerId);
+          } catch (err) {}
+        }
+      });
+
+      grabber.addEventListener("pointermove", (e) => {
+        if (isDragging && e.pointerId === activePointerId) {
+          moveDrag(e.clientY, e);
+        }
+      });
+
+      const onPointerEnd = (e) => {
+        if (e.pointerId === activePointerId) {
+          try {
+            grabber.releasePointerCapture(e.pointerId);
+          } catch (err) {}
+          endDrag();
+        }
+      };
+
+      grabber.addEventListener("pointerup", onPointerEnd);
+      grabber.addEventListener("pointercancel", onPointerEnd);
+    }
+
+    // Touch Events Fallback for full drawer header touch surface
+    const handleTouchStart = (e) => {
+      if (isDragging) return;
+      if (e.touches.length !== 1) return;
+      startDrag(e.touches[0].clientY, e.target, null);
+    };
+
+    const handleTouchMove = (e) => {
+      if (!isDragging) return;
+      if (e.touches.length !== 1) return;
+      moveDrag(e.touches[0].clientY, e);
+    };
+
+    const handleTouchEnd = () => {
+      if (isDragging) endDrag();
+    };
+
+    drawer.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+
+    // Handle screen resize / orientation changes
+    window.addEventListener("resize", () => {
+      if (window.innerWidth >= 900) {
+        drawer.style.transform = "";
+        drawer.style.transition = "";
+        drawer.classList.remove("is-dragging");
+      } else {
+        this.updateDrawerVisualState();
+      }
     });
   }
 
@@ -604,7 +931,7 @@ class KanpurGISApp {
               </svg>
               Locate on Map
             </button>
-            <a href="https://maps.google.com/?q=${station.lat},${station.lng}" target="_blank" rel="noopener" class="action-btn">
+            <a href="${typeof getGoogleMapsWalkingUrl === 'function' ? getGoogleMapsWalkingUrl(station.lat, station.lng) : 'https://www.google.com/maps/dir/?api=1&destination=' + station.lat + ',' + station.lng + '&travelmode=walking'}" target="_blank" rel="noopener noreferrer" class="action-btn">
               Directions
             </a>
           </div>
@@ -621,9 +948,8 @@ class KanpurGISApp {
       this.mapEngine.focusOnLocation(station.lat, station.lng, 16);
       
       // Auto-collapse mobile drawer so map is fully visible
-      const drawer = document.getElementById("tacticalDrawer");
-      if (drawer && window.innerWidth < 900) {
-        drawer.classList.add("collapsed");
+      if (window.innerWidth < 900) {
+        this.setDrawerState("minimized");
       }
     }
   }
@@ -691,9 +1017,8 @@ class KanpurGISApp {
     if (zone && this.mapEngine) {
       const center = zone.center || (zone.polygon ? zone.polygon[0] : [26.4499, 80.3319]);
       this.mapEngine.focusOnLocation(center[0], center[1], 15);
-      const drawer = document.getElementById("tacticalDrawer");
-      if (drawer && window.innerWidth < 900) {
-        drawer.classList.add("collapsed");
+      if (window.innerWidth < 900) {
+        this.setDrawerState("minimized");
       }
     }
   }
@@ -761,6 +1086,9 @@ class KanpurGISApp {
     if (safeRouteBtn) {
       safeRouteBtn.addEventListener("click", () => {
         this.mapEngine.activateSafeRouteToNearestThana();
+        if (window.innerWidth < 900) {
+          this.setDrawerState("minimized");
+        }
       });
     }
 

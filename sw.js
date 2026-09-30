@@ -16,11 +16,13 @@ const PRECACHE_ASSETS = [
   '/js/config.js',
   '/js/data/policeStations.js',
   '/js/data/crimeHotspots.js',
+  '/js/data/wantedCriminals.js',
   '/js/data/localities.js',
   '/js/audio.js',
   '/js/map.js',
   '/js/realtime.js',
   '/js/emergency.js',
+  '/js/dossiers.js',
   '/js/guardian.js',
   '/js/batteryBeacon.js',
   '/js/pwa.js',
@@ -95,7 +97,7 @@ self.addEventListener('fetch', (event) => {
       request.destination === 'script' ||
       request.destination === 'font') {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
+      caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
         if (cachedResponse) {
           return cachedResponse;
         }
@@ -118,7 +120,7 @@ self.addEventListener('fetch', (event) => {
 
   // Strategy B: Stale-While-Revalidate for application shell & data
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
       const fetchPromise = fetch(request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();

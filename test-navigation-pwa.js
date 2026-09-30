@@ -387,9 +387,10 @@ async function runTestSuite() {
     console.log('  -> Test server stopped cleanly.');
   }
 
-  console.log('\n================================================================');
+  console.log('================================================================');
   console.log(`   VERIFICATION SUITE COMPLETE: ${passedAssertions} ASSERTIONS PASSED (100%)   `);
   console.log('================================================================\n');
+  process.exit(0);
 }
 
 runTestSuite().catch(err => {

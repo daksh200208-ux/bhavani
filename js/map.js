@@ -164,7 +164,12 @@ class TacticalMapEngine {
       zoom: APP_CONFIG.defaultZoom,
       minZoom: APP_CONFIG.minZoom,
       maxZoom: APP_CONFIG.maxZoom,
-      zoomControl: false // Custom controls positioned cleanly
+      zoomControl: false, // Custom controls positioned cleanly
+      preferCanvas: true, // Hardware-accelerated canvas rendering for polygons, circles & route lines on mobile
+      zoomAnimation: true,
+      fadeAnimation: true,
+      inertia: true,
+      inertiaDeceleration: 3000
     });
 
     // 2. Setup Base Tile Layers (Direct Google Maps Global Synchronization)

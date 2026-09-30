@@ -381,8 +381,32 @@ const server = http.createServer(async (req, res) => {
     let filePath = path.join(__dirname, targetPath);
 
     // Guard against path traversal
+    let decodedPath = '';
+    try {
+      decodedPath = decodeURIComponent(pathname);
+    } catch (e) {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      return res.end('400 Bad Request');
+    }
+
+    if (pathname.includes('..') || decodedPath.includes('..')) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      return res.end('403 Forbidden');
+    }
+
     const safePath = path.resolve(filePath);
     if (!safePath.startsWith(path.resolve(__dirname))) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      return res.end('403 Forbidden');
+    }
+
+    // Guard sensitive server configuration, source code, and environment files
+    const baseName = path.basename(safePath).toLowerCase();
+    const sensitiveFiles = [
+      'package.json', 'package-lock.json', 'server.js', 'dockerfile',
+      'procfile', 'render.yaml', '.env', '.gitignore', 'cloudflared.exe'
+    ];
+    if (sensitiveFiles.includes(baseName) || baseName.startsWith('.')) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       return res.end('403 Forbidden');
     }
