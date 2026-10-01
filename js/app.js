@@ -40,9 +40,11 @@ class KanpurGISApp {
     // 2.2 Register Service Worker for offline PWA resilience
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        navigator.serviceWorker.register('./sw.js')
           .then((reg) => {
             console.log('[PWA] Service Worker registered with scope:', reg.scope);
+            // Force immediate check for new code
+            reg.update();
           })
           .catch((err) => {
             console.warn('[PWA] Service Worker registration failed:', err);

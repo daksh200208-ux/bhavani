@@ -2,8 +2,8 @@
   "name": "Bhavani - Kanpur Women Safety Grid",
   "short_name": "Bhavani",
   "description": "Bhavani — 24/7 Women Safety, Emergency Helplines & Tactical Police Grid for Kanpur",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "start_url": "./?source=pwa",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#080C15",
@@ -13,37 +13,37 @@
   "categories": ["safety", "navigation", "utilities"],
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-maskable.svg",
+      "src": "icons/icon-maskable.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon.svg",
+      "src": "icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -54,15 +54,15 @@
       "name": "Safe Route to Thana",
       "short_name": "Safe Route",
       "description": "1-Tap escape route to the nearest Kanpur police station",
-      "url": "/?action=safe-route",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "url": "./?action=safe-route",
+      "icons": [{ "src": "icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Emergency 112 Dial",
       "short_name": "Call 112",
       "description": "Direct cellular dial to UP Police Emergency 112",
       "url": "tel:112",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }
