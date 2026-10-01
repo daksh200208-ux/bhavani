@@ -1,12 +1,13 @@
 /**
- * Kanpur Tactical GIS - Production Service Worker
- * Version: 3.6.0
- * Dual caching strategy: Cache-First for static assets & Leaflet CDN,
- * Stale-While-Revalidate for application shell & datasets.
- * Guarantees <0.5s offline boot and preserves cellular telephone dialers.
+ * Bhavani - Kanpur Women Safety Grid
+ * Production Service Worker (v3.0.0)
+ * Dual caching strategy:
+ * - Cache-First for immutable Leaflet CDN & vendor font bundles
+ * - Network-First for application shell, styles, and scripts so phones always receive live updates immediately
+ * Guarantees zero stale-cache traps and offline resilience.
  */
 
-const CACHE_NAME = 'kanpur-gis-v2.6.0';
+const CACHE_NAME = 'bhavani-v3.0.0-kanpur-gis-v2.6.0';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -38,8 +39,9 @@ const PRECACHE_ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-// 1. INSTALL EVENT: Pre-cache core assets & skip waiting
+// 1. INSTALL EVENT: Pre-cache core assets & skip waiting immediately
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -54,7 +56,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 2. ACTIVATE EVENT: Purge old cache generations & claim active clients
+// 2. ACTIVATE EVENT: Purge all old cache generations & immediately claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -70,7 +72,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. FETCH EVENT: Intercept requests with dual caching strategy
+// 3. FETCH EVENT: Network-First for application files; Cache-First for CDN
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -81,7 +83,6 @@ self.addEventListener('fetch', (event) => {
   }
 
   // CRITICAL: NEVER cache or intercept external map tiles (Google Maps, Esri, OSM)
-  // Let the browser fetch them directly from Google's high-speed CDN without caching
   if (url.hostname.includes('google.com') ||
       url.hostname.includes('googleapis.com') ||
       url.hostname.includes('arcgisonline.com') ||
@@ -89,15 +90,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy A: Cache-First for static assets, Leaflet CDN bundles & icons
-  if (url.origin === 'https://unpkg.com' ||
-      url.pathname.startsWith('/icons/') ||
-      url.pathname.startsWith('/css/') ||
-      request.destination === 'style' ||
-      request.destination === 'script' ||
-      request.destination === 'font') {
+  // Strategy A: Cache-First ONLY for immutable external CDN assets (Leaflet CDN, fonts)
+  if (url.origin === 'https://unpkg.com' || request.destination === 'font') {
     event.respondWith(
-      caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
+      caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
           return cachedResponse;
         }
@@ -109,19 +105,17 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return networkResponse;
-        }).catch(() => {
-          // If offline and request is an image or icon, return cached fallback if available
-          return caches.match('/icons/icon-192x192.png');
         });
       })
     );
     return;
   }
 
-  // Strategy B: Stale-While-Revalidate for application shell & data
+  // Strategy B: Network-First for ALL application shell, scripts, styles, and data
+  // Ensures phones ALWAYS receive latest live updates when online, with instant offline fallback
   event.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
-      const fetchPromise = fetch(request).then((networkResponse) => {
+    fetch(request)
+      .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -129,12 +123,16 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch((err) => {
-        // Network unavailable (offline mode)
-        return cachedResponse;
-      });
-
-      return cachedResponse || fetchPromise;
-    })
+      })
+      .catch(() => {
+        // Network unavailable: serve from local offline cache
+        return caches.match(request).then((cached) => {
+          if (cached) return cached;
+          if (request.destination === 'image') {
+            return caches.match('/icons/icon-192x192.png');
+          }
+          return caches.match('/');
+        });
+      })
   );
 });
