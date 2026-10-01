@@ -1,7 +1,7 @@
 /**
  * Kanpur Tactical GIS - Watch Over Me (Live Guardian Tracking Engine)
  * Provides 1-tap live journey sharing via WhatsApp/SMS,
- * real-time breadcrumb telemetry, and a dedicated Guardian Viewer interface.
+ * continuous real-time GPS telemetry, and a dedicated Guardian Viewer interface.
  */
 
 class GuardianJourneyManager {
@@ -9,7 +9,11 @@ class GuardianJourneyManager {
     this.mapEngine = mapEngine;
     this.activeTrip = null;
     this.updateInterval = null;
+    this.geoWatchId = null;
     this.isGuardianMode = false;
+    this.guardianMarker = null;
+    this.guardianTrail = null;
+    this.destMarker = null;
   }
 
   init() {
@@ -23,8 +27,8 @@ class GuardianJourneyManager {
    * Check if page was opened via a guardian tracking link (?trip=TRIP-XXX)
    */
   checkGuardianViewerMode() {
-    const params = new URLSearchParams(window.location.search);
-    const tripId = params.get('trip');
+    const params = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : null;
+    const tripId = params ? params.get('trip') : null;
 
     if (tripId) {
       this.isGuardianMode = true;
@@ -38,7 +42,8 @@ class GuardianJourneyManager {
   setupEventListeners() {
     const watchOverMeBtn = document.getElementById('watchOverMeBtn');
     if (watchOverMeBtn) {
-      watchOverMeBtn.addEventListener('click', () => {
+      watchOverMeBtn.addEventListener('click', (e) => {
+        if (e) e.stopPropagation();
         this.openJourneySetupModal();
       });
     }
@@ -128,44 +133,174 @@ class GuardianJourneyManager {
 
       if (data.success && data.trip) {
         this.activeTrip = data.trip;
-        localStorage.setItem('kanpur_active_trip', JSON.stringify(this.activeTrip));
-        this.closeJourneySetupModal();
-        this.showActiveJourneyHud(this.activeTrip);
-        this.shareJourneyToWhatsApp(this.activeTrip);
-        this.startHeartbeatUpdates();
       } else {
-        alert('Could not initiate journey: ' + (data.error || 'Server error'));
+        throw new Error(data.error || 'Server error');
       }
     } catch (err) {
-      console.error('Failed to start trip:', err);
-      // Offline fallback: generate client-side trip
+      console.warn('[Guardian] Offline fallback trip initiation:', err);
       const tripId = 'TRIP-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      this.activeTrip = { ...payload, tripId, startTime: Date.now(), status: 'ACTIVE' };
-      localStorage.setItem('kanpur_active_trip', JSON.stringify(this.activeTrip));
-      this.closeJourneySetupModal();
-      this.showActiveJourneyHud(this.activeTrip);
-      this.shareJourneyToWhatsApp(this.activeTrip);
-      this.startHeartbeatUpdates();
+      this.activeTrip = {
+        ...payload,
+        tripId,
+        currentCoords: [coords[0], coords[1]],
+        breadcrumbs: [[coords[0], coords[1]]],
+        startTime: Date.now(),
+        status: 'ACTIVE'
+      };
     }
+
+    // Defensive check: ensure currentCoords is always an array
+    if (!this.activeTrip.currentCoords) {
+      this.activeTrip.currentCoords = [coords[0], coords[1]];
+    }
+    if (!this.activeTrip.breadcrumbs) {
+      this.activeTrip.breadcrumbs = [[coords[0], coords[1]]];
+    }
+
+    localStorage.setItem('kanpur_active_trip', JSON.stringify(this.activeTrip));
+    this.closeJourneySetupModal();
+    this.showActiveJourneyHud(this.activeTrip);
+    this.shareJourneyToWhatsApp(this.activeTrip);
+    this.startLiveTelemetryTracking();
+  }
+
+  /**
+   * Continuous real-time GPS tracking using navigator.geolocation.watchPosition
+   * Automatically streams live coordinates whenever the user moves
+   */
+  startLiveTelemetryTracking() {
+    this.stopLiveTelemetryTracking();
+
+    // 1. High Accuracy Geolocation Watcher
+    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+      this.geoWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy || 10;
+          const heading = pos.coords.heading || 0;
+          const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
+          this.handlePositionTelemetry(lat, lng, accuracy, heading, speedKmh);
+        },
+        (err) => console.warn('[Guardian] Live GPS error:', err.message),
+        {
+          enableHighAccuracy: true,
+          maximumAge: 1500,
+          timeout: 10000
+        }
+      );
+    }
+
+    // 2. Regular Heartbeat / Battery Poller (every 4 seconds)
+    this.updateInterval = setInterval(async () => {
+      if (!this.activeTrip || this.activeTrip.status !== 'ACTIVE') {
+        this.stopLiveTelemetryTracking();
+        return;
+      }
+
+      const coords = this.activeTrip.currentCoords || (this.mapEngine && this.mapEngine.userLatLng) || [26.4499, 80.3319];
+      let batteryPct = this.activeTrip.batteryPct;
+      try {
+        if ('getBattery' in navigator) {
+          const b = await navigator.getBattery();
+          batteryPct = Math.round(b.level * 100);
+          this.activeTrip.batteryPct = batteryPct;
+        }
+      } catch (e) {}
+
+      this.sendTripUpdateToServer(coords[0], coords[1], (this.mapEngine && this.mapEngine.userHeading) || 0, 0, batteryPct);
+    }, 4000);
+  }
+
+  stopLiveTelemetryTracking() {
+    if (this.geoWatchId !== null && typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.clearWatch(this.geoWatchId);
+      this.geoWatchId = null;
+    }
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
+  }
+
+  /**
+   * Process and transmit new coordinates from GPS
+   */
+  handlePositionTelemetry(lat, lng, accuracy, heading, speedKmh) {
+    if (!this.activeTrip || this.activeTrip.status !== 'ACTIVE') return;
+
+    // Update local map position
+    if (this.mapEngine && this.mapEngine.setUserLocation) {
+      this.mapEngine.setUserLocation(lat, lng, accuracy, heading, false);
+    }
+
+    // Update active trip state
+    this.activeTrip.currentCoords = [lat, lng];
+    if (!this.activeTrip.breadcrumbs) this.activeTrip.breadcrumbs = [];
+    
+    // Add breadcrumb if moved > 5m
+    const bc = this.activeTrip.breadcrumbs;
+    if (bc.length === 0 || this.getDistanceMeters(bc[bc.length - 1][0], bc[bc.length - 1][1], lat, lng) > 5) {
+      bc.push([lat, lng]);
+      if (bc.length > 200) bc.shift();
+    }
+
+    localStorage.setItem('kanpur_active_trip', JSON.stringify(this.activeTrip));
+    this.sendTripUpdateToServer(lat, lng, heading, speedKmh, this.activeTrip.batteryPct);
+  }
+
+  async sendTripUpdateToServer(lat, lng, heading, speedKmh, batteryPct) {
+    if (!this.activeTrip || !this.activeTrip.tripId) return;
+
+    const payload = {
+      tripId: this.activeTrip.tripId,
+      lat,
+      lng,
+      heading,
+      speedKmh,
+      batteryPct
+    };
+
+    try {
+      await fetch('/api/trip/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {}
+  }
+
+  getDistanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+              Math.cos(phi1) * Math.cos(phi2) *
+              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   /**
    * Format & open WhatsApp with Live Guardian Link
    */
   shareJourneyToWhatsApp(trip) {
-    const origin = window.location.origin;
+    const origin = (typeof window !== 'undefined') ? window.location.origin : 'http://localhost:3000';
     const trackingUrl = `${origin}/?trip=${trip.tripId}`;
-    const googleMapsUrl = `https://maps.google.com/?q=${trip.currentCoords[0].toFixed(5)},${trip.currentCoords[1].toFixed(5)}`;
+    const lat = Array.isArray(trip.currentCoords) ? trip.currentCoords[0] : (Number(trip.lat) || 26.4499);
+    const lng = Array.isArray(trip.currentCoords) ? trip.currentCoords[1] : (Number(trip.lng) || 80.3319);
+    const googleMapsUrl = `https://maps.google.com/?q=${lat.toFixed(5)},${lng.toFixed(5)}`;
 
     const text = 
-`🛡️ *WATCH OVER ME — LIVE JOURNEY TRACKING*
-I am traveling to *${trip.destination}* from *${trip.startLocality}*.
+`🛡️ *BHAVANI — LIVE GUARDIAN TRACKING*
+I am traveling to *${trip.destination}* from *${trip.startLocality || 'Kanpur'}*.
 
 Please watch over me and track my live movement until I reach home:
 🗺️ *Live Grid Tracking*: ${trackingUrl}
 📍 *Google Maps Pin*: ${googleMapsUrl}
 🏢 *Nearest Police Station*: ${trip.nearestThana || 'Kanpur Police'}
-🔋 *Phone Battery*: ${trip.batteryPct}%
+🔋 *Phone Battery*: ${trip.batteryPct || 100}%
 
 _Tap the Live Grid link above to see my live moving dot and safety zone in real time._`;
 
@@ -174,7 +309,9 @@ _Tap the Live Grid link above to see my live moving dot and safety zone in real 
       ? `https://api.whatsapp.com/send?phone=${trip.guardianPhone.replace(/\D/g, '')}&text=${encoded}`
       : `https://api.whatsapp.com/send?text=${encoded}`;
 
-    window.open(waUrl, '_blank');
+    if (typeof window !== 'undefined') {
+      window.open(waUrl, '_blank');
+    }
   }
 
   /**
@@ -190,63 +327,26 @@ _Tap the Live Grid link above to see my live moving dot and safety zone in real 
   }
 
   /**
-   * Periodically send live GPS coordinates to update trip
-   */
-  startHeartbeatUpdates() {
-    clearInterval(this.updateInterval);
-    this.updateInterval = setInterval(async () => {
-      if (!this.activeTrip || this.activeTrip.status !== 'ACTIVE') {
-        clearInterval(this.updateInterval);
-        return;
-      }
-
-      const coords = (this.mapEngine && this.mapEngine.userLatLng) || this.activeTrip.currentCoords;
-      let batteryPct = this.activeTrip.batteryPct;
-      try {
-        if ('getBattery' in navigator) {
-          const b = await navigator.getBattery();
-          batteryPct = Math.round(b.level * 100);
-        }
-      } catch (e) {}
-
-      const updatePayload = {
-        tripId: this.activeTrip.tripId,
-        lat: coords[0],
-        lng: coords[1],
-        heading: (this.mapEngine && this.mapEngine.userHeading) || 0,
-        batteryPct
-      };
-
-      try {
-        await fetch('/api/trip/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatePayload)
-        });
-      } catch (e) {}
-    }, 5000);
-  }
-
-  /**
    * End Journey Safely
    */
   async completeJourney() {
     if (!this.activeTrip) return;
 
+    const tripId = this.activeTrip.tripId;
+    const dest = this.activeTrip.destination;
+    const guardianPhone = this.activeTrip.guardianPhone;
+
     try {
       await fetch('/api/trip/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tripId: this.activeTrip.tripId })
+        body: JSON.stringify({ tripId })
       });
     } catch (e) {}
 
-    const dest = this.activeTrip.destination;
-    const guardianPhone = this.activeTrip.guardianPhone;
-
-    // Clear state
+    // Clear tracking
+    this.stopLiveTelemetryTracking();
     localStorage.removeItem('kanpur_active_trip');
-    clearInterval(this.updateInterval);
     this.activeTrip = null;
 
     const hud = document.getElementById('activeJourneyHud');
@@ -274,7 +374,7 @@ _Tap the Live Grid link above to see my live moving dot and safety zone in real 
         this.activeTrip = JSON.parse(saved);
         if (this.activeTrip && this.activeTrip.status === 'ACTIVE') {
           this.showActiveJourneyHud(this.activeTrip);
-          this.startHeartbeatUpdates();
+          this.startLiveTelemetryTracking();
         }
       }
     } catch (e) {}
@@ -286,41 +386,131 @@ _Tap the Live Grid link above to see my live moving dot and safety zone in real 
   async initGuardianViewer(tripId) {
     console.log(`[GuardianViewer] Initializing guardian view for trip ${tripId}`);
 
-    // Hide auth gate modal in guardian view
+    // 1. Hide auth gate modal in guardian view
     const pinModal = document.getElementById('pinGateModal');
     if (pinModal) pinModal.style.display = 'none';
 
-    // Show Guardian Top Bar
+    // 2. Collapse bottom sheet to minimized so viewer has full map view
+    setTimeout(() => {
+      if (window.gisApp && window.gisApp.setDrawerState) {
+        window.gisApp.setDrawerState('minimized');
+      }
+    }, 200);
+
+    // 3. Show Guardian Top Bar
     const guardianBar = document.getElementById('guardianViewerBar');
     if (guardianBar) guardianBar.style.display = 'flex';
 
-    // Poll live trip coordinates
+    // Setup dedicated layers on Leaflet map
+    let guardianLayerGroup = null;
+    if (this.mapEngine && this.mapEngine.map) {
+      guardianLayerGroup = L.layerGroup().addTo(this.mapEngine.map);
+    }
+
+    let hasCenteredInitial = false;
+
+    const renderGuardianData = (trip) => {
+      if (!trip || !trip.currentCoords) return;
+
+      const lat = trip.currentCoords[0];
+      const lng = trip.currentCoords[1];
+
+      // Update top status bar
+      const statusText = document.getElementById('guardianTripStatusText');
+      if (statusText) {
+        if (trip.status === 'COMPLETED') {
+          statusText.innerHTML = `✅ <strong>${trip.userName}</strong> has reached <strong>${trip.destination}</strong> safely!`;
+          guardianBar.style.background = 'linear-gradient(90deg, #065F46, #047857)';
+          guardianBar.style.borderBottomColor = '#10B981';
+        } else {
+          statusText.innerHTML = `👁️ Watching <strong>${trip.userName}</strong> &bull; Battery: <strong>${trip.batteryPct}%</strong> &bull; Near: <strong>${trip.nearestThana || 'Kanpur Police'}</strong>`;
+        }
+      }
+
+      if (!this.mapEngine || !this.mapEngine.map || !guardianLayerGroup) return;
+
+      // Render or update custom Glowing Guardian Marker
+      const guardianIcon = L.divIcon({
+        className: 'guardian-marker-container',
+        html: `
+          <div class="guardian-target-beacon">
+            <div class="beacon-pulse"></div>
+            <div class="beacon-dot"></div>
+            <div class="beacon-label">📍 ${trip.userName} (LIVE)</div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+
+      if (this.guardianMarker) {
+        this.guardianMarker.setLatLng([lat, lng]);
+      } else {
+        this.guardianMarker = L.marker([lat, lng], {
+          icon: guardianIcon,
+          zIndexOffset: 2000
+        }).addTo(guardianLayerGroup);
+
+        this.guardianMarker.bindPopup(`
+          <div style="font-size: 13px; color: #FFF; font-weight: 700;">
+            🛡️ <strong>${trip.userName}'s Live Location</strong><br>
+            <span style="font-size: 11px; color: #94A3B8;">Destination: ${trip.destination}</span><br>
+            <span style="font-size: 11px; color: #10B981;">Battery: ${trip.batteryPct}%</span><br>
+            <span style="font-size: 11px; color: #38BDF8;">Nearest Police: ${trip.nearestThana || 'Kanpur Police'}</span>
+          </div>
+        `);
+      }
+
+      // Render or update breadcrumb trail
+      if (trip.breadcrumbs && trip.breadcrumbs.length > 0) {
+        if (this.guardianTrail) {
+          this.guardianTrail.setLatLngs(trip.breadcrumbs);
+        } else {
+          this.guardianTrail = L.polyline(trip.breadcrumbs, {
+            color: '#10B981',
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '6, 8',
+            lineJoin: 'round'
+          }).addTo(guardianLayerGroup);
+        }
+      }
+
+      // Center map initially or pan smoothly
+      if (!hasCenteredInitial) {
+        this.mapEngine.map.setView([lat, lng], 16);
+        hasCenteredInitial = true;
+      } else {
+        this.mapEngine.map.panTo([lat, lng], { animate: true, duration: 1 });
+      }
+    };
+
+    // Poll live trip coordinates every 3 seconds
     const pollTrip = async () => {
       try {
         const resp = await fetch(`/api/trip/status?tripId=${tripId}`);
         const data = await resp.json();
 
         if (data.success && data.trip) {
-          const trip = data.trip;
-          const statusText = document.getElementById('guardianTripStatusText');
-          if (statusText) {
-            statusText.innerHTML = trip.status === 'COMPLETED'
-              ? `✅ <strong>${trip.userName}</strong> has reached <strong>${trip.destination}</strong> safely!`
-              : `👁️ Watching over <strong>${trip.userName}</strong> &bull; Heading to <strong>${trip.destination}</strong> (Battery: <strong>${trip.batteryPct}%</strong>)`;
-          }
-
-          if (this.mapEngine && trip.currentCoords) {
-            this.mapEngine.updateUserMarker(trip.currentCoords[0], trip.currentCoords[1], 10, trip.heading);
-            this.mapEngine.map.setView([trip.currentCoords[0], trip.currentCoords[1]], 16);
-          }
+          renderGuardianData(data.trip);
         }
       } catch (e) {
-        console.warn('[GuardianViewer] Poll failed:', e);
+        console.warn('[GuardianViewer] Poll error:', e);
       }
     };
 
+    // Immediate first fetch
     pollTrip();
-    setInterval(pollTrip, 4000);
+    setInterval(pollTrip, 3000);
+
+    // Also listen for WebSocket event if available
+    if (typeof window !== 'undefined') {
+      window.addEventListener('guardianTripUpdate', (e) => {
+        if (e.detail && (e.detail.tripId === tripId || !e.detail.tripId)) {
+          renderGuardianData(e.detail);
+        }
+      });
+    }
   }
 }
 

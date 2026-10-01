@@ -164,83 +164,22 @@ class TacticalAudioEngine {
   }
 
   /**
-   * Start alternating tactical emergency siren (900Hz <-> 450Hz)
+   * Emergency deterrent siren removed per women safety prioritization
    */
   startSosAlarm() {
-    if (this.isMuted || this.sirenInterval) return;
-    this.initContext();
-    if (!this.audioCtx) return;
-
-    try {
-      let highTone = true;
-      const playTone = () => {
-        if (this.isMuted || !this.audioCtx) return;
-        const now = this.audioCtx.currentTime;
-        const osc = this.audioCtx.createOscillator();
-        const gain = this.audioCtx.createGain();
-
-        osc.type = 'triangle';
-        const freq = highTone ? 900 : 500;
-        highTone = !highTone;
-
-        osc.frequency.setValueAtTime(freq, now);
-        gain.gain.setValueAtTime(0.25, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-
-        osc.connect(gain);
-        gain.connect(this.audioCtx.destination);
-
-        osc.start(now);
-        osc.stop(now + 0.36);
-      };
-
-      playTone();
-      this.sirenInterval = setInterval(playTone, 400);
-
-      // Automatically auto-silence after 15 seconds to avoid fatigue
-      setTimeout(() => {
-        this.stopSosAlarm();
-      }, 15000);
-    } catch (e) {
-      console.warn("SOS siren audio error:", e);
-    }
+    return;
   }
 
-  /**
-   * Stop active emergency siren
-   */
   stopSosAlarm() {
-    if (this.sirenInterval) {
-      clearInterval(this.sirenInterval);
-      this.sirenInterval = null;
-    }
+    return;
   }
 
-  /**
-   * Check if SOS siren is currently sounding
-   * @returns {boolean}
-   */
   isSirenActive() {
-    return !!this.sirenInterval;
+    return false;
   }
 
-  /**
-   * Toggle emergency siren (Play loud alternating alert or stop)
-   * @returns {boolean} True if now playing, false if stopped
-   */
   toggleSosAlarm() {
-    this.initContext();
-    if (this.isSirenActive()) {
-      this.stopSosAlarm();
-      return false;
-    } else {
-      this.isMuted = false;
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem("kanpur_audio_muted", "false");
-      }
-      this.startSosAlarm();
-      return true;
-    }
+    return false;
   }
 }
 

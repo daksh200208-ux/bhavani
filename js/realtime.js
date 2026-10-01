@@ -211,6 +211,12 @@ class RealtimeTelemetryManager {
         this.handleSosEmergency(msg.distress || payload);
         break;
 
+      case "GUARDIAN_TRIP_UPDATE":
+      case "GUARDIAN_TRIP_STARTED":
+      case "GUARDIAN_TRIP_COMPLETED":
+        window.dispatchEvent(new CustomEvent("guardianTripUpdate", { detail: msg.trip || payload }));
+        break;
+
       case "PONG":
         // Heartbeat confirmed
         break;
@@ -285,10 +291,7 @@ class RealtimeTelemetryManager {
   handleSosEmergency(distress) {
     console.error("[Realtime] EMERGENCY SOS DISTRESS BROADCAST RECEIVED:", distress);
 
-    // Audio siren
-    if (window.tacticalAudio) {
-      window.tacticalAudio.startSosAlarm();
-    }
+
 
     // Center map on distress location
     if (this.mapEngine && distress.coords) {

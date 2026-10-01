@@ -339,8 +339,8 @@ class KanpurGISApp {
       viewport.classList.add("drawer-half");
       viewport.style.setProperty("--drawer-visible-height", "48vh");
       if (hintText) hintText.textContent = "↕ SLIDE DOWN FOR MAP • UP FOR THANAS";
-      if (toggleLabel) toggleLabel.textContent = "MINIMIZE";
-      if (toggleIcon) toggleIcon.innerHTML = '<polyline points="6 9 12 15 18 9"></polyline>';
+      if (toggleLabel) toggleLabel.textContent = "EXPAND";
+      if (toggleIcon) toggleIcon.innerHTML = '<polyline points="18 15 12 9 6 15"></polyline>';
     }
 
     // Invalidate Leaflet map size so tiles seamlessly cover new viewport area
@@ -388,7 +388,7 @@ class KanpurGISApp {
       return metrics.halfTranslate;
     };
 
-    // Grabber tap/click toggle
+    // Grabber tap/click toggle: Minimized -> Half -> Expanded -> Minimized
     const handleTapToggle = () => {
       if (hasMoved) return;
       if (window.innerWidth >= 900) return; // Desktop sidebar
@@ -396,9 +396,9 @@ class KanpurGISApp {
       if (this.drawerState === "minimized") {
         this.setDrawerState("half");
       } else if (this.drawerState === "half") {
-        this.setDrawerState("minimized");
+        this.setDrawerState("expanded");
       } else {
-        this.setDrawerState("half");
+        this.setDrawerState("minimized");
       }
     };
 
@@ -590,11 +590,9 @@ class KanpurGISApp {
       if (isDragging) endDrag();
     };
 
-    const dragSurfaces = [
-      grabber,
-      document.getElementById("emergencyFloatingHub"),
-      drawer.querySelector(".drawer-nav-tabs")
-    ].filter(Boolean);
+    // Drag gestures restricted STRICTLY to the grabber handle
+    // Never attach to emergency buttons or tabs to ensure 100% instant 1-tap button response
+    const dragSurfaces = [grabber].filter(Boolean);
 
     dragSurfaces.forEach(surface => {
       surface.addEventListener("touchstart", handleTouchStart, { passive: true });
@@ -618,6 +616,11 @@ class KanpurGISApp {
 
   switchTab(tabId) {
     this.activeTab = tabId;
+    
+    // Auto-expand sheet when user taps any tab on mobile so they can browse without getting stuck
+    if (this.drawerState !== "expanded" && window.innerWidth < 900) {
+      this.setDrawerState("expanded");
+    }
     
     // Update tab button highlights
     document.querySelectorAll(".drawer-nav-tabs .tab-btn").forEach(btn => {
@@ -681,47 +684,6 @@ class KanpurGISApp {
       });
     }
 
-    // Loud Emergency Deterrent Siren Button
-    const sirenBtn = document.getElementById("loudSirenBtn");
-    const quickSirenBtn = document.getElementById("quickSirenBtn");
-    const updateSirenVisual = (isActive) => {
-      const sirenText = document.getElementById("sirenBtnText");
-      if (isActive) {
-        if (sirenBtn) sirenBtn.classList.add("siren-active");
-        if (quickSirenBtn) quickSirenBtn.classList.add("siren-active");
-        if (sirenText) sirenText.textContent = "🔇 STOP";
-        document.body.classList.add("siren-strobe-alert");
-      } else {
-        if (sirenBtn) sirenBtn.classList.remove("siren-active");
-        if (quickSirenBtn) quickSirenBtn.classList.remove("siren-active");
-        if (sirenText) sirenText.textContent = "🚨 SIREN";
-        document.body.classList.remove("siren-strobe-alert");
-      }
-    };
-
-    const handleSirenToggle = () => {
-      if (window.tacticalAudio) {
-        const isActive = window.tacticalAudio.toggleSosAlarm();
-        updateSirenVisual(isActive);
-      }
-    };
-
-    if (sirenBtn) {
-      sirenBtn.addEventListener("click", handleSirenToggle);
-    }
-    if (quickSirenBtn) {
-      quickSirenBtn.addEventListener("click", handleSirenToggle);
-    }
-
-    // Periodically verify siren state if audio engine auto-silences
-    setInterval(() => {
-      if (window.tacticalAudio && sirenBtn) {
-        const active = window.tacticalAudio.isSirenActive();
-        if (!active && sirenBtn.classList.contains("siren-active")) {
-          updateSirenVisual(false);
-        }
-      }
-    }, 1000);
   }
 
   // =========================================================================

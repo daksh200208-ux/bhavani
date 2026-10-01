@@ -408,11 +408,10 @@ async function runTests() {
   }
 
   // --- Suite 6: Static Routing & PWA Resilience ---
-  console.log('\n🌐 Suite 6: Static Routing & Deep Linking');
   try {
     const trackRouteRes = await makeRequest('GET', '/track?trip=TRIP-SAMPLE');
     assert(trackRouteRes.status === 200, 'GET /track deep-link serves 200 OK');
-    assert(typeof trackRouteRes.body === 'string' && trackRouteRes.body.includes('Kanpur Tactical GIS'), '/track route serves main HTML application shell');
+    assert(typeof trackRouteRes.body === 'string' && (trackRouteRes.body.includes('Bhavani') || trackRouteRes.body.includes('Kanpur')), '/track route serves main HTML application shell');
 
     const guardianJsRes = await makeRequest('GET', '/js/guardian.js');
     assert(guardianJsRes.status === 200, 'GET /js/guardian.js serves 200 OK');

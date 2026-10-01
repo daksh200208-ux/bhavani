@@ -222,8 +222,12 @@ class TacticalMapEngine {
       }
     });
 
-    // 7. Initial User Location
-    this.locateUser(false);
+    // 7. Initial User Location (Skip if in Guardian Viewer Mode so viewer's phone never overrides tracked citizen)
+    const hasTripQuery = (typeof window !== 'undefined') && (new URLSearchParams(window.location.search).has('trip'));
+    this.isGuardianViewer = hasTripQuery;
+    if (!hasTripQuery) {
+      this.locateUser(false);
+    }
 
     return this;
   }
