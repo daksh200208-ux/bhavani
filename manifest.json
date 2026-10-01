@@ -1,7 +1,7 @@
 {
-  "name": "Kanpur Tactical GIS & Safety Navigator",
-  "short_name": "Kanpur GIS",
-  "description": "Personal safety navigator and live tactical GIS platform for Kanpur Nagar Police Commissionerate",
+  "name": "Bhavani - Kanpur Women Safety Grid",
+  "short_name": "Bhavani",
+  "description": "Bhavani — 24/7 Women Safety, Emergency Helplines & Tactical Police Grid for Kanpur",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
