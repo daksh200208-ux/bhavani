@@ -417,12 +417,10 @@ class KanpurGISApp {
     const startDrag = (clientY, target, pointerId) => {
       if (window.innerWidth >= 900) return false;
 
-      // If touching content pane, only allow pull-down if already at the top of content
-      const isContentArea = target && target.closest(".drawer-content");
-      if (isContentArea) {
-        if (drawerContent && drawerContent.scrollTop > 2) {
-          return false;
-        }
+      // CRITICAL: Never start sheet dragging if user is touching inside scrollable content area
+      // Content scrolling must remain 100% native so all phone numbers and stations can be scrolled
+      if (target && target.closest(".drawer-content")) {
+        return false;
       }
 
       const metrics = getDrawerMetrics();
@@ -455,16 +453,7 @@ class KanpurGISApp {
         drawer.style.transition = "none";
       }
 
-      // Content scroll coordination: if expanded and dragging up, let native scroll happen
-      if (this.drawerState === "expanded" && drawerContent && drawerContent.scrollTop > 0 && deltaY < 0) {
-        isDragging = false;
-        drawer.classList.remove("is-dragging");
-        drawer.style.transition = "";
-        drawer.style.transform = "";
-        return;
-      }
-
-      // Prevent window scroll while dragging sheet
+      // Prevent native window/page scroll ONLY while actively dragging the bottom sheet
       if (cancelableEvent && cancelableEvent.cancelable) {
         cancelableEvent.preventDefault();
       }
@@ -553,7 +542,7 @@ class KanpurGISApp {
       }, 290);
     };
 
-    // Modern Pointer Events with pointer capture on grabber
+    // Modern Pointer Events with pointer capture strictly on grabber
     if (window.PointerEvent && grabber) {
       grabber.addEventListener("pointerdown", (e) => {
         if (e.button !== 0) return;
@@ -583,7 +572,8 @@ class KanpurGISApp {
       grabber.addEventListener("pointercancel", onPointerEnd);
     }
 
-    // Touch Events Fallback for full drawer header touch surface
+    // Touch Events on designated sheet drag surfaces (Grabber, Emergency Hub, Nav Tabs)
+    // EXCLUDING .drawer-content so helplines & thanas list scrolls 100% natively without sticking!
     const handleTouchStart = (e) => {
       if (isDragging) return;
       if (e.touches.length !== 1) return;
@@ -600,7 +590,16 @@ class KanpurGISApp {
       if (isDragging) endDrag();
     };
 
-    drawer.addEventListener("touchstart", handleTouchStart, { passive: true });
+    const dragSurfaces = [
+      grabber,
+      document.getElementById("emergencyFloatingHub"),
+      drawer.querySelector(".drawer-nav-tabs")
+    ].filter(Boolean);
+
+    dragSurfaces.forEach(surface => {
+      surface.addEventListener("touchstart", handleTouchStart, { passive: true });
+    });
+
     window.addEventListener("touchmove", handleTouchMove, { passive: false });
     window.addEventListener("touchend", handleTouchEnd, { passive: true });
     window.addEventListener("touchcancel", handleTouchEnd, { passive: true });
@@ -681,6 +680,48 @@ class KanpurGISApp {
         }
       });
     }
+
+    // Loud Emergency Deterrent Siren Button
+    const sirenBtn = document.getElementById("loudSirenBtn");
+    const quickSirenBtn = document.getElementById("quickSirenBtn");
+    const updateSirenVisual = (isActive) => {
+      const sirenText = document.getElementById("sirenBtnText");
+      if (isActive) {
+        if (sirenBtn) sirenBtn.classList.add("siren-active");
+        if (quickSirenBtn) quickSirenBtn.classList.add("siren-active");
+        if (sirenText) sirenText.textContent = "🔇 STOP";
+        document.body.classList.add("siren-strobe-alert");
+      } else {
+        if (sirenBtn) sirenBtn.classList.remove("siren-active");
+        if (quickSirenBtn) quickSirenBtn.classList.remove("siren-active");
+        if (sirenText) sirenText.textContent = "🚨 SIREN";
+        document.body.classList.remove("siren-strobe-alert");
+      }
+    };
+
+    const handleSirenToggle = () => {
+      if (window.tacticalAudio) {
+        const isActive = window.tacticalAudio.toggleSosAlarm();
+        updateSirenVisual(isActive);
+      }
+    };
+
+    if (sirenBtn) {
+      sirenBtn.addEventListener("click", handleSirenToggle);
+    }
+    if (quickSirenBtn) {
+      quickSirenBtn.addEventListener("click", handleSirenToggle);
+    }
+
+    // Periodically verify siren state if audio engine auto-silences
+    setInterval(() => {
+      if (window.tacticalAudio && sirenBtn) {
+        const active = window.tacticalAudio.isSirenActive();
+        if (!active && sirenBtn.classList.contains("siren-active")) {
+          updateSirenVisual(false);
+        }
+      }
+    }, 1000);
   }
 
   // =========================================================================

@@ -215,6 +215,33 @@ class TacticalAudioEngine {
       this.sirenInterval = null;
     }
   }
+
+  /**
+   * Check if SOS siren is currently sounding
+   * @returns {boolean}
+   */
+  isSirenActive() {
+    return !!this.sirenInterval;
+  }
+
+  /**
+   * Toggle emergency siren (Play loud alternating alert or stop)
+   * @returns {boolean} True if now playing, false if stopped
+   */
+  toggleSosAlarm() {
+    this.initContext();
+    if (this.isSirenActive()) {
+      this.stopSosAlarm();
+      return false;
+    } else {
+      this.isMuted = false;
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem("kanpur_audio_muted", "false");
+      }
+      this.startSosAlarm();
+      return true;
+    }
+  }
 }
 
 // Global instance in browser

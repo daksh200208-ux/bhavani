@@ -32,41 +32,55 @@
         </svg>
       </div>
       <div class="brand-title">
-        <h1>Kanpur Tactical GIS</h1>
+        <h1>Kanpur Women Safety</h1>
         <div class="badge-sub">
           <span class="live-beacon"></span>
-          <span>COMMISSIONERATE GRID</span>
-          <span style="color: #64748B;">&bull;</span>
-          <span style="color: #38BDF8;">RESTRICTED</span>
+          <span>24/7 CITIZEN SHIELD</span>
         </div>
       </div>
     </div>
 
     <div class="header-actions">
+      <!-- Nearest Thana dynamic chip - Primary Priority -->
+      <div class="nearest-hud-chip" id="nearestThanaChip" title="Click to view Safe Haven Route on map">
+        <span>Nearest Police:</span>
+        <strong id="nearestThanaName" style="color: #F8FAFC;">Locating...</strong>
+        <span class="dist-tag" id="nearestThanaDist">--</span>
+      </div>
+
       <!-- Top Locality HUD Chip (Offline Reverse-Geocoded Neighborhood) -->
       <div class="locality-hud-chip" id="localityHudChip" title="Current Kanpur Neighborhood">
         <span class="locality-dot"></span>
-        <span id="localityHudText">Mall Road & Cantt Perimeter</span>
+        <span id="localityHudText">Mall Road & Cantt</span>
       </div>
 
-      <!-- Red Zone Proximity HUD Tag -->
-      <div class="nearest-hud-chip rz-safe" id="nearestRedZoneChip" title="Real-Time Red Zone Distance">
+      <!-- LOUD DETERRENT SIREN BUTTON -->
+      <button class="loud-siren-btn" id="loudSirenBtn" title="Sound Loud Emergency Alarm / Siren to Deter Attackers">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+        <span id="sirenBtnText">🚨 SIREN</span>
+      </button>
+
+      <!-- Red Zone Proximity HUD Tag (Desktop / Tablet) -->
+      <div class="nearest-hud-chip rz-safe desktop-only-chip" id="nearestRedZoneChip" title="Real-Time Red Zone Distance">
         Red Zone: Safe
       </div>
 
-      <!-- WebSocket Live Connection Status Pill -->
-      <div class="ws-status-chip status-offline" id="wsStatusChip" title="WebSocket Live Telemetry Status">
+      <!-- WebSocket Live Connection Status Pill (Desktop / Tablet) -->
+      <div class="ws-status-chip status-offline desktop-only-chip" id="wsStatusChip" title="WebSocket Live Telemetry Status">
         <span class="status-dot"></span>
         <span class="status-text">GRID OFFLINE</span>
       </div>
 
       <!-- Offline Telemetry Active Pill -->
-      <div class="nearest-hud-chip" id="offlineIndicatorPill" style="display: none; border-color: #F59E0B; color: #FCD34D;">
-        âš ï¸ CELLULAR ACTIVE
+      <div class="nearest-hud-chip desktop-only-chip" id="offlineIndicatorPill" style="display: none; border-color: #F59E0B; color: #FCD34D;">
+        ⚠️ CELLULAR ACTIVE
       </div>
 
       <!-- Tactical Audio Mute/Unmute Toggle -->
-      <button class="glass-btn" id="audioToggleBtn" title="Tactical Audio Alerts (Click to Mute/Unmute)" style="width: 36px; height: 36px;">
+      <button class="glass-btn desktop-only-chip" id="audioToggleBtn" title="Tactical Audio Alerts (Click to Mute/Unmute)" style="width: 36px; height: 36px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
           <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
@@ -74,19 +88,12 @@
       </button>
 
       <!-- Real-time Hardware Battery Telemetry Pill -->
-      <div class="battery-pill normal" id="deviceBatteryPill" title="Device Battery Level (Hardware Monitored)">
+      <div class="battery-pill normal desktop-only-chip" id="deviceBatteryPill" title="Device Battery Level (Hardware Monitored)">
         --% 🔋
       </div>
 
-      <!-- Nearest Thana dynamic chip -->
-      <div class="nearest-hud-chip" id="nearestThanaChip" title="Click to focus on map">
-        <span>Thana:</span>
-        <strong id="nearestThanaName" style="color: #F8FAFC;">Locating...</strong>
-        <span class="dist-tag" id="nearestThanaDist">--</span>
-      </div>
-
-      <!-- Lock console button -->
-      <button class="glass-btn" id="lockAppBtn" title="Lock Tactical Console" style="width: 36px; height: 36px;">
+      <!-- Lock console button (Desktop Admin only) -->
+      <button class="glass-btn desktop-only-chip" id="lockAppBtn" title="Lock Tactical Console" style="width: 36px; height: 36px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -331,44 +338,61 @@
 
       <!-- Emergency Calling Hub (Direct Phone Dialer & Safe Haven Actions) -->
       <div class="emergency-floating-hub" id="emergencyFloatingHub">
+        <!-- Dual Primary Lifelines: 112 Police + 1090 Women Power Line -->
+        <div class="primary-call-row">
+          <!-- MAIN 112 ACTION: Native Telephone Dialer Trigger -->
+          <a href="tel:112" class="call-112-btn" id="main112DialBtn" title="Call UP Emergency 112 Immediately">
+            <svg viewBox="0 0 24 24">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            <div class="call-btn-text">
+              <span class="btn-title">POLICE PRV</span>
+              <span class="btn-number">112</span>
+            </div>
+          </a>
+
+          <!-- 1090 WOMEN POWER LINE UP ACTION -->
+          <a href="tel:1090" class="call-1090-btn" id="main1090DialBtn" title="Call UP Women Power Line 1090">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M12 8v4M12 16h.01"/>
+            </svg>
+            <div class="call-btn-text">
+              <span class="btn-title">WOMEN LINE</span>
+              <span class="btn-number">1090</span>
+            </div>
+          </a>
+        </div>
+
         <div class="sos-sub-actions">
           <!-- 1-Tap Safe Route Action Button -->
           <button class="safe-route-thana-btn" id="safeRouteBtn" title="1-Tap Safe Route to Nearest Police Station">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
-            <span>Safe Route to Thana</span>
+            <span>🏃 Safe Route to Thana</span>
           </button>
 
           <!-- Watch Over Me Live Guardian Button -->
           <button class="safe-route-thana-btn watch-over-me-btn" id="watchOverMeBtn" title="Share Live Journey with Guardian / Family">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <circle cx="12" cy="11" r="3"/>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
             </svg>
-            <span>Watch Over Me</span>
+            <span>👁️ Watch Over Me</span>
           </button>
 
+          <!-- SOS Toolkit -->
           <button class="mini-action-pill" id="openSosToolkitBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="16" y1="13" x2="8" y2="13"/>
               <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
             </svg>
-            SOS Toolkit
+            <span>SOS Toolkit</span>
           </button>
         </div>
-
-        <!-- MAIN 112 ACTION: Native Telephone Dialer Trigger -->
-        <a href="tel:112" class="call-112-btn" id="main112DialBtn" title="Call UP Emergency 112 Immediately">
-          <svg viewBox="0 0 24 24">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-          </svg>
-          <span class="btn-title">EMERGENCY</span>
-          <span class="btn-number">112</span>
-        </a>
       </div>
 
       <!-- Navigation Tabs -->
