@@ -11,10 +11,12 @@
     "test:all": "node test-realtime.js && node tests/adversarial-geofence.test.js && node tests/adversarial/security_adversarial_suite.js && node test-navigation-pwa.js"
   },
   "dependencies": {
-    "ws": "^8.16.0",
-    "jsonwebtoken": "^9.0.2"
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "jsonwebtoken": "^9.0.3",
+    "ws": "^8.22.0"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   },

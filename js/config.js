@@ -2,7 +2,7 @@
  * Kanpur Tactical GIS - System Configuration & Presets
  */
 const APP_CONFIG = {
-  appName: "Kanpur Tactical GIS & Safety Grid",
+  appName: "Bhavani - Kanpur Women Safety Grid",
   appVersion: "2.4.0-PRO",
   defaultCenter: [26.4499, 80.3319], // Kanpur Nagar City Center
   defaultZoom: 13,

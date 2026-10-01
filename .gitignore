@@ -14,3 +14,8 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 cloudflared.exe
+# Build outputs
+android/.gradle/
+android/build/
+android/app/build/
+www/

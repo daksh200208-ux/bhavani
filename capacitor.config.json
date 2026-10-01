@@ -1,0 +1,8 @@
+{
+  "appId": "com.bhavani.safety",
+  "appName": "Bhavani",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

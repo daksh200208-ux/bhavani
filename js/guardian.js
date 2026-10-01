@@ -254,6 +254,12 @@ class GuardianJourneyManager {
 
     const payload = {
       tripId: this.activeTrip.tripId,
+      userName: this.activeTrip.userName || 'Citizen',
+      destination: this.activeTrip.destination || 'Home',
+      currentCoords: [lat, lng],
+      breadcrumbs: this.activeTrip.breadcrumbs || [[lat, lng]],
+      nearestThana: this.activeTrip.nearestThana || 'Kanpur Police',
+      status: this.activeTrip.status || 'ACTIVE',
       lat,
       lng,
       heading,
@@ -261,12 +267,23 @@ class GuardianJourneyManager {
       batteryPct
     };
 
+    // 1. Send to local backend if reachable
     try {
-      await fetch('/api/trip/update', {
+      fetch('/api/trip/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      });
+      }).catch(() => {});
+    } catch (e) {}
+
+    // 2. Transmit to public cloud relay (ntfy.sh) so tracking works 100% free from laptop
+    try {
+      const topic = 'bhavani-trip-' + this.activeTrip.tripId.toLowerCase().replace(/[^a-z0-9]/g, '');
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: 'POST',
+        headers: { 'Title': 'Bhavani Live GPS', 'Priority': 'low' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
     } catch (e) {}
   }
 
@@ -286,10 +303,18 @@ class GuardianJourneyManager {
    * Format & open WhatsApp with Live Guardian Link
    */
   shareJourneyToWhatsApp(trip) {
-    const origin = (typeof window !== 'undefined') ? window.location.origin : 'http://localhost:3000';
-    const trackingUrl = `${origin}/?trip=${trip.tripId}`;
+    const isLocalhost = (typeof window !== 'undefined') && (
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1' || 
+      window.location.protocol === 'capacitor:' ||
+      window.location.protocol === 'file:'
+    );
+    const origin = (typeof window !== 'undefined' && !isLocalhost && window.location.origin.startsWith('http')) 
+      ? window.location.origin 
+      : 'https://daksh200208-ux.github.io/bhavani';
     const lat = Array.isArray(trip.currentCoords) ? trip.currentCoords[0] : (Number(trip.lat) || 26.4499);
     const lng = Array.isArray(trip.currentCoords) ? trip.currentCoords[1] : (Number(trip.lng) || 80.3319);
+    const trackingUrl = `${origin}/?trip=${encodeURIComponent(trip.tripId)}&lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&dest=${encodeURIComponent(trip.destination || 'Home')}&name=${encodeURIComponent(trip.userName || 'Citizen')}&bat=${trip.batteryPct || 100}`;
     const googleMapsUrl = `https://maps.google.com/?q=${lat.toFixed(5)},${lng.toFixed(5)}`;
 
     const text = 
@@ -342,6 +367,16 @@ _Tap the Live Grid link above to see my live moving dot and safety zone in real 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tripId })
       });
+    } catch (e) {}
+
+    // Transmit complete event to cloud relay for zero-laptop live tracking
+    try {
+      const topic = 'bhavani-trip-' + tripId.toLowerCase().replace(/[^a-z0-9]/g, '');
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: 'POST',
+        headers: { 'Title': 'Bhavani Live GPS Reached Safely' },
+        body: JSON.stringify({ tripId, status: 'COMPLETED', destination: dest, userName: (this.activeTrip && this.activeTrip.userName) || 'Citizen' })
+      }).catch(() => {});
     } catch (e) {}
 
     // Clear tracking
@@ -485,7 +520,46 @@ _Tap the Live Grid link above to see my live moving dot and safety zone in real 
       }
     };
 
-    // Poll live trip coordinates every 3 seconds
+    // Immediate fallback rendering from URL query parameters (instant zero-server display)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLat = parseFloat(urlParams.get('lat'));
+      const urlLng = parseFloat(urlParams.get('lng'));
+      if (!isNaN(urlLat) && !isNaN(urlLng)) {
+        renderGuardianData({
+          tripId,
+          userName: urlParams.get('name') || 'Citizen',
+          destination: urlParams.get('dest') || 'Destination',
+          batteryPct: parseInt(urlParams.get('bat') || '100', 10),
+          currentCoords: [urlLat, urlLng],
+          breadcrumbs: [[urlLat, urlLng]],
+          status: 'ACTIVE'
+        });
+      }
+    }
+
+    // Subscribe to cloud relay (ntfy.sh) SSE for real-time tracking free from laptop
+    const cleanTopic = 'bhavani-trip-' + tripId.toLowerCase().replace(/[^a-z0-9]/g, '');
+    try {
+      if (typeof EventSource !== 'undefined') {
+        const sse = new EventSource(`https://ntfy.sh/${cleanTopic}/sse`);
+        sse.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data && data.message) {
+              const tripUpdate = JSON.parse(data.message);
+              if (tripUpdate && (tripUpdate.tripId === tripId || tripUpdate.currentCoords)) {
+                renderGuardianData(tripUpdate);
+              }
+            }
+          } catch (e) {}
+        };
+      }
+    } catch (e) {
+      console.warn('[GuardianViewer] SSE relay error:', e);
+    }
+
+    // Poll live trip coordinates every 3 seconds from local server (if available)
     const pollTrip = async () => {
       try {
         const resp = await fetch(`/api/trip/status?tripId=${tripId}`);
@@ -495,7 +569,7 @@ _Tap the Live Grid link above to see my live moving dot and safety zone in real 
           renderGuardianData(data.trip);
         }
       } catch (e) {
-        console.warn('[GuardianViewer] Poll error:', e);
+        // Silently handled: cloud relay handles live tracking when local laptop is offline
       }
     };
 
